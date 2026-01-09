@@ -110,7 +110,8 @@ AABoxBot::AABoxBot()
 	IsSpawnMode=false;
 	ClockSpawnLeft=false;
 	ClockSpawnRight=false;
-	IsJumping=false;
+	IsInAir=false;
+	IsPutDown=false;
 }
 
 // Called when the game starts or when spawned
@@ -124,7 +125,15 @@ void AABoxBot::BeginPlay()
 void AABoxBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+	if (CheckIsOnGround())
+	{
+		IsInAir=false;
+	}
+	else
+	{
+		IsInAir=true;
+		FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
+	}
 }
 
 // Called to bind functionality to input
@@ -149,7 +158,8 @@ void AABoxBot::RightFunction(float AxisValue)
 		BoxBody->SetPhysicsLinearVelocity(FVector(0, 0, CurrentVel.Z));
 		ClockSpawnLeft=false;
 		ClockSpawnRight=false;
-		if (CheckIsOnGround())FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
+		if (IsInAir)return;
+		FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
 		return;
 	}
 	FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
@@ -178,7 +188,8 @@ void AABoxBot::RightFunction(float AxisValue)
 		}
 		
 	}
-	if (CheckIsOnGround())
+	if (IsPutDown)return;
+	if (!IsInAir||!CheckIsHooked())
 	{
 		uint8 RotationYaw=0;
 		if (AxisValue>0)
@@ -198,7 +209,8 @@ void AABoxBot::RightFunction(float AxisValue)
 		FVector DeltaLoc = FVector(AxisValue * Speed /** DeltaTime*/ , 0, 0);
 		BoxBody->SetPhysicsLinearVelocity(FVector( DeltaLoc.X,0,CurrentVelocity.Z));
 		//AddActorLocalOffset(DeltaLoc);
-		//if (CheckIsOnGround())FootFlipbookComponent->SetFlipbook(FootPaperFlipbook);
+		if (IsInAir)return;
+		FootFlipbookComponent->SetFlipbook(FootPaperFlipbook);
 	}
 	
 }
@@ -210,9 +222,9 @@ void AABoxBot::JumpFunction()
 		BoxBody->SetPhysicsLinearVelocity(FVector(0,0,CurrentVelocity.Z));
 		return;
 	}
-	if (CheckIsOnGround())
+	if (IsPutDown)return;
+	if (!IsInAir)
 	{
-		FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
 		BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,0));
 		BoxBody->AddImpulse(FVector(0,0,25000));
 		//BoxCollision->AddImpulse(GetActorUpVector().RotateAngleAxis(35.f,FVector::LeftVector)*25000.f);
@@ -249,7 +261,6 @@ void AABoxBot::SpawnBox(FVector Direction)
     	FHitResult HitResult;
     	FCollisionQueryParams CollisionParameters;
     	CollisionParameters.AddIgnoredActor(BoxChain.Last());
-    	FCollisionResponseParams CollisionParams;
     	
     	bool IsHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility,CollisionParameters);
     	
@@ -331,18 +342,41 @@ void AABoxBot::OnSpawnDown()
 
 void AABoxBot::BeginPutDownBox()
 {
+	
 	if (IsSpawnMode)
 	{
 		OnSpawnDown();
 		return;
 	}
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, 0.0f));
+	IsPutDown=true;
 }
 
 void AABoxBot::EndPutDownBox()
 {
 	if (IsSpawnMode)return;
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));
+	IsPutDown=false;
+}
+
+bool AABoxBot::CheckIsHooked()
+{
+	if (BoxChain.Num()==0)return false;
+	
+	FHitResult HitResult;
+	FCollisionQueryParams CollisionParameters;
+	CollisionParameters.AddIgnoredActor(this);
+	CollisionParameters.AddIgnoredActors(BoxChain);
+	for (AActor* Box : BoxChain)
+	{
+		if (!IsValid(Box)) continue;
+		FVector Start = Box->GetActorLocation();
+		FVector End = Start + FVector(0.0f, 0.0f, -35.0f);
+		bool IsHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility,CollisionParameters);
+		if (IsHit)return true;
+	}
+
+	return false;
 }
 
 
