@@ -16,6 +16,7 @@ void AHomeGameModeBase::BeginPlay()
 
 AHomeGameModeBase::AHomeGameModeBase()
 {
+//
 	DefaultPawnClass=AABoxBot::StaticClass();
 }
 
