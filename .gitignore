@@ -73,8 +73,4 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
-.idea/.idea.Mouth04/.idea/.name
-.idea/.idea.Mouth04/.idea/indexLayout.xml
-.idea/.idea.Mouth04/.idea/vcs.xml
-.idea/.idea.Mouth04/.idea/projectSettingsUpdater.xml
-.idea/.idea.Mouth04/.idea/workspace.xml
+.idea/*
