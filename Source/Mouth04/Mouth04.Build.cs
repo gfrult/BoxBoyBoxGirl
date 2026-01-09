@@ -8,7 +8,7 @@ public class Mouth04 : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput","Paper2D","PhysicsCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput","Paper2D","PhysicsCore","UMG" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
