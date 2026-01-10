@@ -47,7 +47,7 @@ AABoxBot::AABoxBot()
 	BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
 	
 	BoxBody->SetPhysMaterialOverride(BotPhysMat);
-	BoxBody->SetBoxExtent(FVector(32.0f, 32.0f, 32.0f)); 
+	BoxBody->SetBoxExtent(FVector(30.0f, 30.0f, 30.0f)); 
 	BoxBody->SetSimulatePhysics(true);
 	BoxBody->GetBodyInstance()->bLockXRotation = true;
 	BoxBody->GetBodyInstance()->bLockYRotation = true;
@@ -57,7 +57,7 @@ AABoxBot::AABoxBot()
 	
 	
 	BoxFoot->SetPhysMaterialOverride(BotPhysMat);
-	BoxFoot->SetSphereRadius(32.0f);
+	BoxFoot->SetSphereRadius(30.0f);
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));
 	BoxFoot->SetCollisionProfileName(TEXT("Pawn")); 
 	BoxFoot->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
@@ -66,8 +66,8 @@ AABoxBot::AABoxBot()
 	SpringArm->SetRelativeRotation(FRotator(0,-90,0));
 	SpringArm->TargetArmLength = 4500.0f;
 	SpringArm->bEnableCameraLag = true;
-	SpringArm->CameraLagSpeed = 0.5f;
-	SpringArm->CameraLagMaxDistance = 350.0f;
+	SpringArm->CameraLagSpeed = 0.5f; 
+	SpringArm->CameraLagMaxDistance = 400.0f;
 	SpringArm->SocketOffset = FVector(0.0f, 0.0f, 200.0f);
 	
 	Camera->FieldOfView = 15.0f;
@@ -134,6 +134,17 @@ void AABoxBot::Tick(float DeltaTime)
 		bIsInAir=true;
 		FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
 	}
+	float ZVelocity = BoxBody->GetPhysicsLinearVelocity().Z;
+	
+	float TargetOffsetZ = 200.0f;
+
+	if (ZVelocity < -200.0f) 
+	{
+		TargetOffsetZ = 0.0f; 
+	}
+	float CurrentOffsetZ = SpringArm->SocketOffset.Z;
+	float NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, TargetOffsetZ, DeltaTime, 1.0f);
+	SpringArm->SocketOffset = FVector(SpringArm->SocketOffset.X, SpringArm->SocketOffset.Y, NewOffsetZ);
 }
 
 // Called to bind functionality to input
@@ -290,16 +301,20 @@ void AABoxBot::SpawnBox(FVector Direction)
     {
     	SpawnLoc = BoxChain.Last()->GetActorLocation()+ (Direction * 64.0f);
     	FVector Start = BoxChain.Last()->GetActorLocation();
-    	FVector End = Start + (Direction * 35.0f);
+    	float TraceDist = (Direction.Z < 0) ? 59.0f : 35.0f; //判断检测方向，如果向下就检测一个方块的距离，否则只检测短距离
+    	FVector End = Start + (Direction * TraceDist);
     	FHitResult HitResult;
     	FCollisionQueryParams CollisionParameters;
     	CollisionParameters.AddIgnoredActor(BoxChain.Last());
     	
-    	bool IsHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility,CollisionParameters);
-    	
-    	if (IsHit)
+    	FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f));
+
+    	bool IsHit = GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, CollisionParameters);
+    	//判断是回收还是生成新的方块
+    	if (IsHit)//回收或向下生成
     	{
     		UE_LOG(LogTemp, Log, TEXT("111111"));
+    		bool bIsRetracting = false;
     		if (BoxChain.Num()==1)
     		{
     			if (HitResult.GetComponent() == BoxBody)
@@ -310,6 +325,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     				{
     					BoxToKill->Destroy();
     				}
+    				bIsRetracting=true;
     			}
     		}
     		if (BoxChain.Num()>=2)
@@ -322,9 +338,62 @@ void AABoxBot::SpawnBox(FVector Direction)
     					BoxToKill->Destroy();
     				}
     				UE_LOG(LogTemp, Log, TEXT("%d"),BoxChain.Num());
+    				bIsRetracting=true;
     			}
     		}
-    		return;
+    		if (bIsRetracting) return;
+    		if (Direction.Z >= 0) //不是向下
+    		{
+    			return; 
+    		}
+    		if (Direction.Z < 0) //向下检测到非自身的物体
+    		{
+    			UPrimitiveComponent* HitComp = HitResult.GetComponent();
+    			if (HitComp && HitComp->GetCollisionResponseToChannel(ECC_Pawn) == ECR_Block)//判断检测到的是什么（预留设计）
+    			{
+    				float CurrentGap = FMath::Abs(Start.Z - HitResult.ImpactPoint.Z-30);
+    				UE_LOG(LogTemp, Log, TEXT("%f"),CurrentGap);
+    				if (CurrentGap < 60.0f)//距离不够塞下一个方块
+    				{
+					    UE_LOG(LogTemp, Log, TEXT("CurrentGap < 60.0f"));
+    					float LiftHeight = 60 - CurrentGap;//需要抬升的高度
+    					bool bRoofBlocked = false; 
+    					
+    					FHitResult RoofHit;
+    					FCollisionQueryParams RoofParams;
+    					RoofParams.AddIgnoredActor(this);
+    					RoofParams.AddIgnoredActors(BoxChain);
+    					//检测玩家本身上方有没有空位
+    					if (GetWorld()->SweepSingleByChannel(RoofHit, GetActorLocation(), GetActorLocation() + FVector(0,0,LiftHeight), FQuat::Identity, ECC_Visibility, CheckShape, RoofParams))
+    					{
+    						bRoofBlocked = true;
+    					}
+    					//检查每一个箱子上方是不是有空位
+    					if (!bRoofBlocked)
+    					{
+    						for (AActor* Box : BoxChain)
+    						{
+    							if (!IsValid(Box)) continue;
+    							FVector BoxStart = Box->GetActorLocation();
+    							FVector BoxEnd = BoxStart + FVector(0,0,LiftHeight);
+
+    							if (GetWorld()->SweepSingleByChannel(RoofHit,BoxStart, BoxEnd, FQuat::Identity, ECC_Visibility,CheckShape, RoofParams))
+    							{
+    								bRoofBlocked = true;
+    								break; 
+    							}
+    						}
+    					}
+    					if (bRoofBlocked) return;//如果没有位置就不生成
+    					if (BoxChain.Num()>=MaxBoxNumber)return;
+    					BoxBody->SetPhysicsLinearVelocity(FVector::ZeroVector);
+    					AddActorWorldOffset(FVector(0, 0, LiftHeight), false);//先抬高玩家
+    					
+    					SpawnLoc.Z = HitResult.ImpactPoint.Z + 28;
+					    UE_LOG(LogTemp, Log, TEXT("%f"),LiftHeight);
+    				}
+    			}
+    		}
     	}
     }
     else//身上没方块
@@ -340,6 +409,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     	
     }
 	if (BoxChain.Num()>=MaxBoxNumber)return;
+	//生成
 	ABoxActor* NewBox = GetWorld()->SpawnActor<ABoxActor>(ABoxActor::StaticClass(), SpawnLoc, FRotator::ZeroRotator, SpawnParams);
 	if (NewBox)
 	{
