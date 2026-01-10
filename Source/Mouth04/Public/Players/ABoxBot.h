@@ -53,11 +53,11 @@ public:
 	void EndPutDownBox();
 	bool CheckIsHooked();
 	
-	bool IsSpawnMode;
-	bool ClockSpawnLeft;
-	bool ClockSpawnRight;
-	bool IsInAir;
-	bool IsPutDown;
+	bool bIsSpawnMode;
+	bool bClockSpawnLeft;
+	bool bClockSpawnRight;
+	bool bIsInAir;
+	bool bIsPutDown;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BoxBoy Settings", meta = (ClampMin = "0"))
 	int32 MaxBoxNumber=5;
 	

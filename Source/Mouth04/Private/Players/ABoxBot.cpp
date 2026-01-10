@@ -107,11 +107,11 @@ AABoxBot::AABoxBot()
 		JumpPaperFlipbook=JumpPF.Object;
 	}
 	
-	IsSpawnMode=false;
-	ClockSpawnLeft=false;
-	ClockSpawnRight=false;
-	IsInAir=false;
-	IsPutDown=false;
+	bIsSpawnMode=false;
+	bClockSpawnLeft=false;
+	bClockSpawnRight=false;
+	bIsInAir=false;
+	bIsPutDown=false;
 }
 
 // Called when the game starts or when spawned
@@ -127,11 +127,11 @@ void AABoxBot::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	if (CheckIsOnGround())
 	{
-		IsInAir=false;
+		bIsInAir=false;
 	}
 	else
 	{
-		IsInAir=true;
+		bIsInAir=true;
 		FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
 	}
 }
@@ -156,74 +156,105 @@ void AABoxBot::RightFunction(float AxisValue)
 		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
 		FVector CurrentVel = BoxBody->GetPhysicsLinearVelocity();
 		BoxBody->SetPhysicsLinearVelocity(FVector(0, 0, CurrentVel.Z));
-		ClockSpawnLeft=false;
-		ClockSpawnRight=false;
-		if (IsInAir)return;
+		bClockSpawnLeft=false;
+		bClockSpawnRight=false;
+		if (bIsInAir)return;
 		FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
 		return;
 	}
 	FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
-	if (IsSpawnMode)
+	if (bIsSpawnMode)
 	{
 		BoxBody->SetPhysicsLinearVelocity(FVector(0,0,CurrentVelocity.Z));
 		if (AxisValue>0)
 		{
-			if (!ClockSpawnRight)
+			if (!bClockSpawnRight)
 			{
 				OnSpawnRight();
-				ClockSpawnLeft=false;
-				ClockSpawnRight=true;
+				bClockSpawnLeft=false;
+				bClockSpawnRight=true;
 			}
 			return;
 		}
 		if (AxisValue<0)
 		{
-			if (!ClockSpawnLeft)
+			if (!bClockSpawnLeft)
 			{
 				OnSpawnLeft();
-				ClockSpawnLeft=true;
-				ClockSpawnRight=false;
+				bClockSpawnLeft=true;
+				bClockSpawnRight=false;
 			}
 			return;
 		}
 		
 	}
-	if (IsPutDown)return;
-	if (!IsInAir||!CheckIsHooked())
+	if (bIsPutDown)return;
+	if (!bIsInAir||!CheckIsHooked())//检测是否在空中或者有方块接触地面
 	{
-		uint8 RotationYaw=0;
-		if (AxisValue>0)
-		{
-			RotationYaw=180;
-		}
-		if (AxisValue<0)
-		{
-			RotationYaw=0;
-		}
+		uint8 RotationYaw = (AxisValue > 0) ? 180 : 0;
 		EyesFlipbookComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
 		FootFlipbookComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
 		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,6));
 		
 		//float DeltaTime = GetWorld()->GetDeltaSeconds();
 		float Speed = 200;
-		FVector DeltaLoc = FVector(AxisValue * Speed /** DeltaTime*/ , 0, 0);
+		float TargetVelX = AxisValue * Speed;
+		//检测撞墙清空速度，防止挂墙或者卡墙
+		FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(30.0f, 30.0f, 30.0f)); 
+		FCollisionQueryParams Params;
+		FHitResult HitResult;
+		Params.AddIgnoredActor(this);
+		Params.AddIgnoredActors(BoxChain);
+		bool bHitWall = false;
+		FVector Start = BoxBody->GetComponentLocation();
+		FVector End = Start + FVector((AxisValue * 5.0f),0,0); 
+		//本体有没有撞墙
+		if (GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params))
+		{
+			bHitWall = true;
+		}
+		else //盒子有没有撞墙
+		{
+			for (AActor* Box : BoxChain)
+			{
+				if (!IsValid(Box)) continue;
+				Start = Box->GetActorLocation();
+				End = Start + (AxisValue * 3.0f);
+
+				if (GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params))
+				{
+					bHitWall = true;
+					break; 
+				}
+			}
+		}
+		if (bHitWall)
+		{
+			TargetVelX = 0.0f;
+		}
+		
+		FVector DeltaLoc = FVector(TargetVelX /** DeltaTime*/ , 0, 0);
 		BoxBody->SetPhysicsLinearVelocity(FVector( DeltaLoc.X,0,CurrentVelocity.Z));
 		//AddActorLocalOffset(DeltaLoc);
-		if (IsInAir)return;
+		if (bIsInAir)return;
 		FootFlipbookComponent->SetFlipbook(FootPaperFlipbook);
+	}
+	else //悬空且挂在悬崖上立即停止移动
+	{
+		BoxBody->SetPhysicsLinearVelocity(FVector(0.0f, 0.0f, CurrentVelocity.Z));
 	}
 	
 }
 void AABoxBot::JumpFunction()
 {
 	FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
-	if (IsSpawnMode)
+	if (bIsSpawnMode)
 	{
 		BoxBody->SetPhysicsLinearVelocity(FVector(0,0,CurrentVelocity.Z));
 		return;
 	}
-	if (IsPutDown)return;
-	if (!IsInAir)
+	if (bIsPutDown)return;
+	if (!bIsInAir)
 	{
 		BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,0));
 		BoxBody->AddImpulse(FVector(0,0,25000));
@@ -237,23 +268,25 @@ bool AABoxBot::CheckIsOnGround()
 	FVector Start = BoxBody->GetComponentLocation();
 	//UE_LOG(LogTemp, Log, TEXT("X: %f, Y: %f, Z: %f"), Start.X, Start.Y, Start.Z);
 	FVector End = Start + (FVector::DownVector * 50.0f);
+	FVector BoxExtent = FVector(30.0f, 30.0f, 1.0f);
+	FCollisionShape SweepShape = FCollisionShape::MakeBox(BoxExtent);
 	FCollisionQueryParams CollisionParameters;
 	CollisionParameters.AddIgnoredActor(this);
 	CollisionParameters.AddIgnoredActors(BoxChain);
 	FHitResult HitResult;
-	bool IsOnGround = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, CollisionParameters);
+	bool IsOnGround = GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, SweepShape, CollisionParameters);
 	return IsOnGround;
 }
 
 void AABoxBot::SpawnBox(FVector Direction)
 {
-	if (!IsSpawnMode ) return;
+	if (!bIsSpawnMode ) return;
 	FVector SpawnLoc ;
 	
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	
-    if (BoxChain.Num()>0)
+    if (BoxChain.Num()>0)//身上有方块
     {
     	SpawnLoc = BoxChain.Last()->GetActorLocation()+ (Direction * 64.0f);
     	FVector Start = BoxChain.Last()->GetActorLocation();
@@ -294,7 +327,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     		return;
     	}
     }
-    else
+    else//身上没方块
     {
     	if (Direction.Z<0)return;
     	SpawnLoc = GetActorLocation() + (Direction * 64.0f);
@@ -343,20 +376,20 @@ void AABoxBot::OnSpawnDown()
 void AABoxBot::BeginPutDownBox()
 {
 	
-	if (IsSpawnMode)
+	if (bIsSpawnMode)
 	{
 		OnSpawnDown();
 		return;
 	}
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, 0.0f));
-	IsPutDown=true;
+	bIsPutDown=true;
 }
 
 void AABoxBot::EndPutDownBox()
 {
-	if (IsSpawnMode)return;
+	if (bIsSpawnMode)return;
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));
-	IsPutDown=false;
+	bIsPutDown=false;
 }
 
 bool AABoxBot::CheckIsHooked()
@@ -382,13 +415,13 @@ bool AABoxBot::CheckIsHooked()
 
 void AABoxBot::BeginSpawnBox()
 {
-	IsSpawnMode=true;
+	bIsSpawnMode=true;
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, 0.0f));
 }
 
 void AABoxBot::EndSpawnBox()
 {
-	IsSpawnMode=false;
+	bIsSpawnMode=false;
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));
 }
 
