@@ -66,7 +66,7 @@ AABoxBot::AABoxBot()
 	SpringArm->SetRelativeRotation(FRotator(0,-90,0));
 	SpringArm->TargetArmLength = 4500.0f;
 	SpringArm->bEnableCameraLag = true;
-	SpringArm->CameraLagSpeed = 0.5f; 
+	SpringArm->CameraLagSpeed = 0.8f; 
 	SpringArm->CameraLagMaxDistance = 400.0f;
 	SpringArm->SocketOffset = FVector(0.0f, 0.0f, 200.0f);
 	
@@ -76,6 +76,12 @@ AABoxBot::AABoxBot()
 	if (BodySprite.Object)
 	{
 		BodySpriteComponent->SetSprite(BodySprite.Object);
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UPaperSprite> PutDownSprite(TEXT("/Script/Paper2D.PaperSprite'/Game/MyBoxGame/Textures/Sheep/Box/BoxSheepB_Sprite.BoxSheepB_Sprite'"));
+	if (PutDownSprite.Object)
+	{
+		BoxSheepB=PutDownSprite.Object;
 	}
 	
 	static ConstructorHelpers::FObjectFinder<UPaperFlipbook> RunPaperFlipbook(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/PF_SheepFootRun.PF_SheepFootRun'"));
@@ -140,7 +146,7 @@ void AABoxBot::Tick(float DeltaTime)
 
 	if (ZVelocity < -200.0f) 
 	{
-		TargetOffsetZ = 0.0f; 
+		TargetOffsetZ = -50.0f; 
 	}
 	float CurrentOffsetZ = SpringArm->SocketOffset.Z;
 	float NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, TargetOffsetZ, DeltaTime, 1.0f);
@@ -158,6 +164,7 @@ void AABoxBot::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("SpawnUp", IE_Pressed, this, &AABoxBot::OnSpawnUp);
 	PlayerInputComponent->BindAction("Put Down", IE_Pressed, this, &AABoxBot::BeginPutDownBox);
 	PlayerInputComponent->BindAction(TEXT("Put Down"),IE_Released,this,&AABoxBot::EndPutDownBox);
+	PlayerInputComponent->BindAction(TEXT("Remove Box"),IE_Pressed,this,&AABoxBot::RemoveDroppedBoxes);
 }
 
 void AABoxBot::RightFunction(float AxisValue)
@@ -292,6 +299,7 @@ bool AABoxBot::CheckIsOnGround()
 void AABoxBot::SpawnBox(FVector Direction)
 {
 	if (!bIsSpawnMode ) return;
+	RemoveDroppedBoxes();
 	FVector SpawnLoc ;
 	
 	FActorSpawnParameters SpawnParams;
@@ -453,6 +461,7 @@ void AABoxBot::BeginPutDownBox()
 	}
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, 0.0f));
 	bIsPutDown=true;
+	PutDownBox();
 }
 
 void AABoxBot::EndPutDownBox()
@@ -480,6 +489,70 @@ bool AABoxBot::CheckIsHooked()
 	}
 
 	return false;
+}
+
+void AABoxBot::PutDownBox()
+{
+    if (BoxChain.Num() == 0) return;
+    AActor* LeaderBox = BoxChain[0]; 
+	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSprite(BoxSheepB);
+    if (!IsValid(LeaderBox)) return;
+
+    for (int32 i = 1; i < BoxChain.Num(); i++)
+    {
+        AActor* ChildBox = BoxChain[i];
+        if (IsValid(ChildBox))
+        {
+            FAttachmentTransformRules AttachRules(EAttachmentRule::KeepWorld, true);
+            ChildBox->AttachToActor(LeaderBox, AttachRules);
+        	
+            ABoxActor* MyBox = Cast<ABoxActor>(ChildBox);
+            if (MyBox && MyBox->Box)
+            {
+            	MyBox->SpriteComponent->SetSprite(BoxSheepB);
+            	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
+            }
+        }
+    }
+	
+    FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
+    LeaderBox->DetachFromActor(DetachRules);
+	
+    ABoxActor* MyLeader = Cast<ABoxActor>(LeaderBox);
+    if (MyLeader && MyLeader->Box)
+    {
+    	MyLeader->Box->SetCollisionProfileName(TEXT("BlockAll"));
+    	
+    	MyLeader->Box->SetMassOverrideInKg(NAME_None, 10.0f, true);
+    	MyLeader->Box->GetBodyInstance()->bLockXRotation = true;
+    	MyLeader->Box->GetBodyInstance()->bLockYRotation = true;
+    	MyLeader->Box->GetBodyInstance()->bLockZRotation = true;
+    	
+    	//MyLeader->AddActorWorldOffset(FVector(0, 0, 2.0f), false, nullptr, ETeleportType::TeleportPhysics);
+        
+    	MyLeader->Box->RecreatePhysicsState();//刷新物理
+    	MyLeader->Box->SetSimulatePhysics(true);
+    }
+	DroppedBoxes = BoxChain;
+	
+    BoxChain.Empty();     
+    bIsSpawnMode = false; 
+
+    bClockSpawnLeft = false;
+    bClockSpawnRight = false;
+}
+
+void AABoxBot::RemoveDroppedBoxes()
+{
+	if (DroppedBoxes.Num() == 0) return;
+	for (AActor* Box : DroppedBoxes)
+	{
+		if (IsValid(Box))
+		{
+			Box->Destroy(); 
+		}
+	}
+	DroppedBoxes.Empty();
 }
 
 

@@ -32,12 +32,14 @@ public:
 	class UBoxComponent* BoxBody;
 	class USphereComponent* BoxFoot;
 	class UPhysicalMaterial* BotPhysMat;
-	TArray<class AActor*> BoxChain;
+	TArray<AActor*> BoxChain;
+	TArray<AActor*> DroppedBoxes;
 	class UPaperSpriteComponent* BodySpriteComponent;
 	class UPaperFlipbookComponent* EyesFlipbookComponent;
 	class UPaperFlipbook* FootPaperFlipbook;
 	class UPaperFlipbook* StandPaperFlipbook;
 	class UPaperFlipbook* JumpPaperFlipbook;
+	class UPaperSprite* BoxSheepB;
 	
 	void RightFunction(float AxisValue);
 	void JumpFunction();
@@ -52,6 +54,8 @@ public:
 	void BeginPutDownBox();
 	void EndPutDownBox();
 	bool CheckIsHooked();
+	void PutDownBox();
+	void RemoveDroppedBoxes();
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
