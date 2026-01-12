@@ -67,5 +67,9 @@ public:
 	bool bIsPutDown;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BoxBoy Settings", meta = (ClampMin = "0"))
 	int32 MaxBoxNumber=5;
+	float ShakeAmplitude = 1.4f;	// 颤动的偏移幅度（厘米）
+	float ShakeFrequency = 9.0f;	// 颤动的频率（每秒震动次数）
+	FVector BodySpriteInitialRelativeLoc;	// 记录初始相对位置（确保复位准确）
+	
 	
 };

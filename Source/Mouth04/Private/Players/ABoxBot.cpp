@@ -36,6 +36,7 @@ AABoxBot::AABoxBot()
 	SpringArm->SetupAttachment(RootComponent);
 	Camera->SetupAttachment(SpringArm);
 	BodySpriteComponent->SetupAttachment(BoxBody);
+	BodySpriteInitialRelativeLoc = BodySpriteComponent->GetRelativeLocation();// 记录初始相对位置
 	BoxFoot->SetupAttachment(BoxBody);
 	FootFlipbookComponent->SetupAttachment(BoxFoot);
 	EyesFlipbookComponent->SetupAttachment(BoxBody);
@@ -133,6 +134,8 @@ AABoxBot::AABoxBot()
 	bClockSpawnRight=false;
 	bIsInAir=false;
 	bIsPutDown=false;
+
+	PrimaryActorTick.bCanEverTick = true;	// 开启Tick（必须，否则颤动逻辑不执行）
 }
 
 // Called when the game starts or when spawned
@@ -173,6 +176,26 @@ void AABoxBot::Tick(float DeltaTime)
 	float CurrentOffsetZ = SpringArm->SocketOffset.Z;
 	float NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, TargetOffsetZ, DeltaTime, 1.0f);
 	SpringArm->SocketOffset = FVector(SpringArm->SocketOffset.X, SpringArm->SocketOffset.Y, NewOffsetZ);
+	if (bIsSpawnMode && BodySpriteComponent)
+	{
+		// 计算颤动偏移：使用正弦函数实现左右往复运动
+		float ShakeOffset = FMath::Sin(GetWorld()->GetTimeSeconds() * ShakeFrequency * 2 * PI) * ShakeAmplitude;
+        
+		// 构造新的相对位置：仅X轴左右偏移，Y/Z轴保持初始值（不上下/前后动）
+		FVector NewRelativeLoc = BodySpriteInitialRelativeLoc;
+		NewRelativeLoc.X = BodySpriteInitialRelativeLoc.X + ShakeOffset;
+        
+		// 设置新的相对位置（相对BoxBody，BoxBody本身不动）
+		BodySpriteComponent->SetRelativeLocation(NewRelativeLoc);
+		
+		// 表情组件同步偏移（核心：跟随主体的X轴偏移）
+		FVector EyeInitialLoc = EyesFlipbookComponent->GetRelativeLocation(); // 眼睛初始位置(0,5,0)
+		FVector NewEyeRelativeLoc = EyeInitialLoc;
+		NewEyeRelativeLoc.X = EyeInitialLoc.X + ShakeOffset; // 同步X轴颤动
+		EyesFlipbookComponent->SetRelativeLocation(NewEyeRelativeLoc);
+	}
+
+
 }
 
 // Called to bind functionality to input
@@ -637,4 +660,15 @@ void AABoxBot::EndSpawnBox()
 	bIsSpawnMode=false;
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12));
 	EyesFlipbookComponent->SetFlipbook(EyesFlipbook);
+	//将身体复原到原位
+	if (BodySpriteComponent)
+	{
+		BodySpriteComponent->SetRelativeLocation(BodySpriteInitialRelativeLoc);
+	}
+	
+	// 表情组件位置复位
+	if (EyesFlipbookComponent)
+	{
+		EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,0));
+	}
 }
