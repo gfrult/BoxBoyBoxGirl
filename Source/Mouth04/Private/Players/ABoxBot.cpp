@@ -84,10 +84,18 @@ AABoxBot::AABoxBot()
 		BoxSheepB=PutDownSprite.Object;
 	}
 	
-	static ConstructorHelpers::FObjectFinder<UPaperFlipbook> RunPaperFlipbook(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/PF_SheepFootRun.PF_SheepFootRun'"));
-	if (RunPaperFlipbook.Object)
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook> RunPF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/PF_SheepFootRun.PF_SheepFootRun'"));
+	if (RunPF.Object)
 	{
-		FootPaperFlipbook=RunPaperFlipbook.Object;
+		RunPaperFlipbook = RunPF.Object;
+		//FootFlipbookComponent->SetFlipbook(FootPaperFlipbook.Object);
+		//FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,5));
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook> HookPF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/SheepFoot_Suspended.SheepFoot_Suspended'"));
+	if (HookPF.Object)
+	{
+		HookPaperFlipbook = HookPF.Object;
 		//FootFlipbookComponent->SetFlipbook(FootPaperFlipbook.Object);
 		//FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,5));
 	}
@@ -95,8 +103,15 @@ AABoxBot::AABoxBot()
 	static ConstructorHelpers::FObjectFinder<UPaperFlipbook> EyesPaperFlipbook(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/PF_SheepFace_zhayan.PF_SheepFace_zhayan'"));
 	if (EyesPaperFlipbook.Object)
 	{
-		EyesFlipbookComponent->SetFlipbook(EyesPaperFlipbook.Object);
+		EyesFlipbook=EyesPaperFlipbook.Object;
+		EyesFlipbookComponent->SetFlipbook(EyesFlipbook);
 		EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,0));
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook> SpawnBoxEyesPaperFlipbook(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/SheepFace_Spawn.SheepFace_Spawn'"));
+	if (SpawnBoxEyesPaperFlipbook.Object)
+	{
+		SpawnBoxEyesFlipbook=SpawnBoxEyesPaperFlipbook.Object;
 	}
 	
 	static ConstructorHelpers::FObjectFinder<UPaperFlipbook> StandRF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/PF_SheepFoot_Stand.PF_SheepFoot_Stand'"));
@@ -138,7 +153,14 @@ void AABoxBot::Tick(float DeltaTime)
 	else
 	{
 		bIsInAir=true;
-		FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
+		if (CheckIsHooked())
+		{
+			FootFlipbookComponent->SetFlipbook(HookPaperFlipbook);
+		}
+		else
+		{
+			FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
+		}
 	}
 	float ZVelocity = BoxBody->GetPhysicsLinearVelocity().Z;
 	
@@ -146,7 +168,7 @@ void AABoxBot::Tick(float DeltaTime)
 
 	if (ZVelocity < -200.0f) 
 	{
-		TargetOffsetZ = -50.0f; 
+		TargetOffsetZ = -100.0f; 
 	}
 	float CurrentOffsetZ = SpringArm->SocketOffset.Z;
 	float NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, TargetOffsetZ, DeltaTime, 1.0f);
@@ -218,18 +240,48 @@ void AABoxBot::RightFunction(float AxisValue)
 		float Speed = 200;
 		float TargetVelX = AxisValue * Speed;
 		//检测撞墙清空速度，防止挂墙或者卡墙
-		FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(30.0f, 30.0f, 30.0f)); 
+		float UAxisValue=(AxisValue > 0) ? 1.0f : -1.0f;
+		FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f)); 
 		FCollisionQueryParams Params;
 		FHitResult HitResult;
 		Params.AddIgnoredActor(this);
 		Params.AddIgnoredActors(BoxChain);
 		bool bHitWall = false;
 		FVector Start = BoxBody->GetComponentLocation();
-		FVector End = Start + FVector((AxisValue * 5.0f),0,0); 
+		FVector End = Start + FVector((UAxisValue * 5.0f),0,0); 
 		//本体有没有撞墙
-		if (GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params))
+		bool IsHit = GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params);
+		if (IsHit)
 		{
-			bHitWall = true;
+			AActor* HitActor = HitResult.GetActor();
+			ABoxActor* HitBox = Cast<ABoxActor>(HitActor);
+			
+			if (!HitBox)//撞到的不是箱子
+			{
+				bHitWall = true;
+			}
+			else
+			{
+				if (DroppedBoxes.Num())
+				{
+					for (AActor* DroppedBox : DroppedBoxes)
+					{
+						if (!IsValid(DroppedBox)) continue;
+						Start = DroppedBox->GetActorLocation();
+						End = Start + FVector((UAxisValue * 5.0f),0,0); 
+						FCollisionQueryParams DropParams;
+						DropParams.AddIgnoredActor(this);
+						DropParams.AddIgnoredActors(DroppedBoxes);
+						FHitResult DropHitResult;
+						if (GetWorld()->SweepSingleByChannel(DropHitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, DropParams))
+						{
+							bHitWall = true;
+							break; 
+						}
+					}
+				}
+			}
+			
 		}
 		else //盒子有没有撞墙
 		{
@@ -237,7 +289,7 @@ void AABoxBot::RightFunction(float AxisValue)
 			{
 				if (!IsValid(Box)) continue;
 				Start = Box->GetActorLocation();
-				End = Start + (AxisValue * 3.0f);
+				End = Start + FVector((UAxisValue * 5.0f),0,0); 
 
 				if (GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params))
 				{
@@ -255,7 +307,7 @@ void AABoxBot::RightFunction(float AxisValue)
 		BoxBody->SetPhysicsLinearVelocity(FVector( DeltaLoc.X,0,CurrentVelocity.Z));
 		//AddActorLocalOffset(DeltaLoc);
 		if (bIsInAir)return;
-		FootFlipbookComponent->SetFlipbook(FootPaperFlipbook);
+		FootFlipbookComponent->SetFlipbook(RunPaperFlipbook);
 	}
 	else //悬空且挂在悬崖上立即停止移动
 	{
@@ -274,8 +326,8 @@ void AABoxBot::JumpFunction()
 	if (bIsPutDown)return;
 	if (!bIsInAir)
 	{
-		BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,0));
-		BoxBody->AddImpulse(FVector(0,0,25000));
+		BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,400));
+		//BoxBody->AddImpulse(FVector(0,0,25000));
 		//BoxCollision->AddImpulse(GetActorUpVector().RotateAngleAxis(35.f,FVector::LeftVector)*25000.f);
 	}
 	
@@ -509,6 +561,13 @@ void AABoxBot::PutDownBox()
             ABoxActor* MyBox = Cast<ABoxActor>(ChildBox);
             if (MyBox && MyBox->Box)
             {
+            	MyBox->BotPhysMat->Restitution = 0.0f;  
+            	MyBox->BotPhysMat->Friction = 1.0f;     
+            	MyBox->BotPhysMat->Density = 1.0f;
+            	MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
+            	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Max;
+            	
+            	MyBox->Box->SetPhysMaterialOverride(BotPhysMat);
             	MyBox->SpriteComponent->SetSprite(BoxSheepB);
             	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
             }
@@ -523,7 +582,17 @@ void AABoxBot::PutDownBox()
     {
     	MyLeader->Box->SetCollisionProfileName(TEXT("BlockAll"));
     	
-    	MyLeader->Box->SetMassOverrideInKg(NAME_None, 10.0f, true);
+    	MyLeader->BotPhysMat->Restitution = 0.0f;  
+    	MyLeader->BotPhysMat->Friction = 1.0f;     
+    	MyLeader->BotPhysMat->Density = 1.0f;
+    	MyLeader->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
+    	MyLeader->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Max;
+        	
+    	MyLeader->Box->SetPhysMaterialOverride(BotPhysMat);
+    	
+    	MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
+    	
+    	MyLeader->Box->SetLinearDamping(20.0f);
     	MyLeader->Box->GetBodyInstance()->bLockXRotation = true;
     	MyLeader->Box->GetBodyInstance()->bLockYRotation = true;
     	MyLeader->Box->GetBodyInstance()->bLockZRotation = true;
@@ -560,11 +629,12 @@ void AABoxBot::BeginSpawnBox()
 {
 	bIsSpawnMode=true;
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, 0.0f));
+	EyesFlipbookComponent->SetFlipbook(SpawnBoxEyesFlipbook);
 }
 
 void AABoxBot::EndSpawnBox()
 {
 	bIsSpawnMode=false;
-	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));
+	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12));
+	EyesFlipbookComponent->SetFlipbook(EyesFlipbook);
 }
-

@@ -36,10 +36,13 @@ public:
 	TArray<AActor*> DroppedBoxes;
 	class UPaperSpriteComponent* BodySpriteComponent;
 	class UPaperFlipbookComponent* EyesFlipbookComponent;
-	class UPaperFlipbook* FootPaperFlipbook;
+	class UPaperFlipbook* RunPaperFlipbook;
 	class UPaperFlipbook* StandPaperFlipbook;
+	class UPaperFlipbook* HookPaperFlipbook;
 	class UPaperFlipbook* JumpPaperFlipbook;
 	class UPaperSprite* BoxSheepB;
+	class UPaperFlipbook* SpawnBoxEyesFlipbook;
+	class UPaperFlipbook* EyesFlipbook;
 	
 	void RightFunction(float AxisValue);
 	void JumpFunction();
