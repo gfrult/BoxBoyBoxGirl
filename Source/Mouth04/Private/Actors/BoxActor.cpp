@@ -27,7 +27,7 @@ ABoxActor::ABoxActor()
 	BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Min;
 	BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
 	
-	Box->SetBoxExtent(FVector(30,30,30));
+	Box->SetBoxExtent(FVector(31,31,31));
 	Box->SetPhysMaterialOverride(BotPhysMat);
 	Box->SetCollisionProfileName(TEXT("BlockAll"));
 	Box->GetBodyInstance()->bLockYTranslation = true;

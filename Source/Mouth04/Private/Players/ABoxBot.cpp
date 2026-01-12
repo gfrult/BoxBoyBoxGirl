@@ -33,10 +33,11 @@ AABoxBot::AABoxBot()
 	BodySpriteComponent=CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("BodySpriteComponent"));
 	EyesFlipbookComponent=CreateDefaultSubobject<UPaperFlipbookComponent>(TEXT("EyesFlipbookComponent"));
 	
+	BodySpriteInitialRelativeLoc = BodySpriteComponent->GetRelativeLocation();// 记录初始相对位置
+	
 	SpringArm->SetupAttachment(RootComponent);
 	Camera->SetupAttachment(SpringArm);
 	BodySpriteComponent->SetupAttachment(BoxBody);
-	BodySpriteInitialRelativeLoc = BodySpriteComponent->GetRelativeLocation();// 记录初始相对位置
 	BoxFoot->SetupAttachment(BoxBody);
 	FootFlipbookComponent->SetupAttachment(BoxFoot);
 	EyesFlipbookComponent->SetupAttachment(BoxBody);
@@ -48,7 +49,7 @@ AABoxBot::AABoxBot()
 	BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
 	
 	BoxBody->SetPhysMaterialOverride(BotPhysMat);
-	BoxBody->SetBoxExtent(FVector(30.0f, 30.0f, 30.0f)); 
+	BoxBody->SetBoxExtent(FVector(31.0f, 31.0f, 31.0f)); 
 	BoxBody->SetSimulatePhysics(true);
 	BoxBody->GetBodyInstance()->bLockXRotation = true;
 	BoxBody->GetBodyInstance()->bLockYRotation = true;
@@ -72,6 +73,8 @@ AABoxBot::AABoxBot()
 	SpringArm->SocketOffset = FVector(0.0f, 0.0f, 200.0f);
 	
 	Camera->FieldOfView = 15.0f;
+	PlayerXVector=-1.0f;
+	BoxYVector=0;
 	
 	static ConstructorHelpers::FObjectFinder<UPaperSprite> BodySprite(TEXT("/Script/Paper2D.PaperSprite'/Game/MyBoxGame/Textures/Sheep/BaseSprite/SheepBodyBase_Sprite.SheepBodyBase_Sprite'"));
 	if (BodySprite.Object)
@@ -134,8 +137,8 @@ AABoxBot::AABoxBot()
 	bClockSpawnRight=false;
 	bIsInAir=false;
 	bIsPutDown=false;
-
 	PrimaryActorTick.bCanEverTick = true;	// 开启Tick（必须，否则颤动逻辑不执行）
+	bIsThrowing=false;
 }
 
 // Called when the game starts or when spawned
@@ -176,6 +179,7 @@ void AABoxBot::Tick(float DeltaTime)
 	float CurrentOffsetZ = SpringArm->SocketOffset.Z;
 	float NewOffsetZ = FMath::FInterpTo(CurrentOffsetZ, TargetOffsetZ, DeltaTime, 1.0f);
 	SpringArm->SocketOffset = FVector(SpringArm->SocketOffset.X, SpringArm->SocketOffset.Y, NewOffsetZ);
+	
 	if (bIsSpawnMode && BodySpriteComponent)
 	{
 		// 计算颤动偏移：使用正弦函数实现左右往复运动
@@ -194,8 +198,26 @@ void AABoxBot::Tick(float DeltaTime)
 		NewEyeRelativeLoc.X = EyeInitialLoc.X + ShakeOffset; // 同步X轴颤动
 		EyesFlipbookComponent->SetRelativeLocation(NewEyeRelativeLoc);
 	}
-
-
+	if (DroppedBoxes.Num())
+	{
+		for (AActor* Box : DroppedBoxes)
+		{
+			FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f)); 
+			FCollisionQueryParams Params;
+			FHitResult HitResult;
+			Params.AddIgnoredActors(DroppedBoxes);
+			FVector Start = Box->GetActorLocation();
+			FVector End = Start + FVector(0,0,-5.0f); 
+			if (GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params))
+			{
+				Cast<ABoxActor>(DroppedBoxes[0])->Box->SetLinearDamping(20.0f);
+				UE_LOG(LogTemp, Log, TEXT("下落阻尼20"));
+				break;
+			}
+				Cast<ABoxActor>(DroppedBoxes[0])->Box->SetLinearDamping(1.0f);
+				UE_LOG(LogTemp, Log, TEXT("下落阻尼1"));
+		}
+	}
 }
 
 // Called to bind functionality to input
@@ -255,6 +277,7 @@ void AABoxBot::RightFunction(float AxisValue)
 	if (!bIsInAir||!CheckIsHooked())//检测是否在空中或者有方块接触地面
 	{
 		uint8 RotationYaw = (AxisValue > 0) ? 180 : 0;
+		PlayerXVector=(AxisValue > 0) ? 1 : -1;
 		EyesFlipbookComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
 		FootFlipbookComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
 		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,6));
@@ -413,6 +436,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     		}
     		if (BoxChain.Num()>=2)
     		{
+    			if (HitResult.GetActor() == this)return;
     			if (HitResult.GetActor() == BoxChain[BoxChain.Num()-2])
     			{
     				AActor* BoxToKill = BoxChain.Pop();
@@ -439,7 +463,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     				if (CurrentGap < 60.0f)//距离不够塞下一个方块
     				{
 					    UE_LOG(LogTemp, Log, TEXT("CurrentGap < 60.0f"));
-    					float LiftHeight = 60 - CurrentGap;//需要抬升的高度
+    					float LiftHeight = 62 - CurrentGap;//需要抬升的高度
     					bool bRoofBlocked = false; 
     					
     					FHitResult RoofHit;
@@ -482,6 +506,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     else//身上没方块
     {
     	if (Direction.Z<0)return;
+    	BoxYVector=Direction.X;
     	SpawnLoc = GetActorLocation() + (Direction * 64.0f);
     	FVector Start = BoxBody->GetComponentLocation();
     	FVector End = Start + (Direction * 35.0f);
@@ -542,6 +567,7 @@ void AABoxBot::BeginPutDownBox()
 void AABoxBot::EndPutDownBox()
 {
 	if (bIsSpawnMode)return;
+	AddActorWorldOffset(FVector(0, 0, 10), true);
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));
 	bIsPutDown=false;
 }
@@ -588,9 +614,9 @@ void AABoxBot::PutDownBox()
             	MyBox->BotPhysMat->Friction = 1.0f;     
             	MyBox->BotPhysMat->Density = 1.0f;
             	MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
-            	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Max;
+            	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
             	
-            	MyBox->Box->SetPhysMaterialOverride(BotPhysMat);
+            	MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
             	MyBox->SpriteComponent->SetSprite(BoxSheepB);
             	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
             }
@@ -609,13 +635,13 @@ void AABoxBot::PutDownBox()
     	MyLeader->BotPhysMat->Friction = 1.0f;     
     	MyLeader->BotPhysMat->Density = 1.0f;
     	MyLeader->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
-    	MyLeader->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Max;
+    	MyLeader->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
         	
-    	MyLeader->Box->SetPhysMaterialOverride(BotPhysMat);
+    	MyLeader->Box->SetPhysMaterialOverride(MyLeader->BotPhysMat);
     	
     	MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
     	
-    	MyLeader->Box->SetLinearDamping(20.0f);
+    	MyLeader->Box->SetLinearDamping(1.0f);
     	MyLeader->Box->GetBodyInstance()->bLockXRotation = true;
     	MyLeader->Box->GetBodyInstance()->bLockYRotation = true;
     	MyLeader->Box->GetBodyInstance()->bLockZRotation = true;
@@ -647,9 +673,90 @@ void AABoxBot::RemoveDroppedBoxes()
 	DroppedBoxes.Empty();
 }
 
+void AABoxBot::ThrowBox(float ThrowVector)
+{
+	if (BoxChain.Num() == 0) return;
+    AActor* LeaderBox = BoxChain[0]; 
+	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSprite(BoxSheepB);
+    if (!IsValid(LeaderBox)) return;
+
+    for (int32 i = 1; i < BoxChain.Num(); i++)
+    {
+        AActor* ChildBox = BoxChain[i];
+        if (IsValid(ChildBox))
+        {
+            FAttachmentTransformRules AttachRules(EAttachmentRule::KeepWorld, true);
+            ChildBox->AttachToActor(LeaderBox, AttachRules);
+        	
+            ABoxActor* MyBox = Cast<ABoxActor>(ChildBox);
+            if (MyBox && MyBox->Box)
+            {
+            	MyBox->BotPhysMat->Restitution = 0.0f;  
+            	MyBox->BotPhysMat->Friction = 1.0f;     
+            	MyBox->BotPhysMat->Density = 1.0f;
+            	MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
+            	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
+            	
+            	MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
+            	MyBox->SpriteComponent->SetSprite(BoxSheepB);
+            	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
+            }
+        }
+    }
+	
+    FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
+    LeaderBox->DetachFromActor(DetachRules);
+	
+    ABoxActor* MyLeader = Cast<ABoxActor>(LeaderBox);
+    if (MyLeader && MyLeader->Box)
+    {
+    	MyLeader->Box->SetCollisionProfileName(TEXT("BlockAll"));
+    	
+    	MyLeader->BotPhysMat->Restitution = 0.0f;  
+    	MyLeader->BotPhysMat->Friction = 1.0f;     
+    	MyLeader->BotPhysMat->Density = 1.0f;
+    	MyLeader->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
+    	MyLeader->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
+        	
+    	MyLeader->Box->SetPhysMaterialOverride(MyLeader->BotPhysMat);
+    	
+    	MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
+    	
+    	MyLeader->Box->SetLinearDamping(1.0f);
+    	MyLeader->Box->GetBodyInstance()->bLockXRotation = true;
+    	MyLeader->Box->GetBodyInstance()->bLockYRotation = true;
+    	MyLeader->Box->GetBodyInstance()->bLockZRotation = true;
+    	
+    	//MyLeader->AddActorWorldOffset(FVector(0, 0, 2.0f), false, nullptr, ETeleportType::TeleportPhysics);
+        
+    	MyLeader->Box->RecreatePhysicsState();//刷新物理
+    	MyLeader->Box->SetSimulatePhysics(true);
+    }
+	MyLeader->Box->AddImpulse(FVector(20000*ThrowVector,0,40000));
+	DroppedBoxes = BoxChain;
+	
+    BoxChain.Empty();     
+    bIsSpawnMode = false; 
+
+    bClockSpawnLeft = false;
+    bClockSpawnRight = false;
+}
+
 
 void AABoxBot::BeginSpawnBox()
 {
+	if (BoxChain.Num())//如果身上有方块直接扔出去
+	{
+		if (BoxYVector*PlayerXVector<0)//如果方块在背面，执行放下
+		{
+			PutDownBox();
+			return;
+		}
+		ThrowBox(PlayerXVector);
+		bIsThrowing=true;
+		return;
+	}
+	bIsThrowing=false;
 	bIsSpawnMode=true;
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, 0.0f));
 	EyesFlipbookComponent->SetFlipbook(SpawnBoxEyesFlipbook);
@@ -658,14 +765,32 @@ void AABoxBot::BeginSpawnBox()
 void AABoxBot::EndSpawnBox()
 {
 	bIsSpawnMode=false;
-	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12));
+	//结束放置时如果脚下有生成的方块，直接执行放下方块
+	FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f)); 
+	FCollisionQueryParams Params;
+	FHitResult HitResult;
+	Params.AddIgnoredActor(this);
+	FVector Start = BoxBody->GetComponentLocation();
+	FVector End = Start + FVector(0,0,-5); 
+	GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params);
+	if (BoxChain.Contains(HitResult.GetActor()))
+		//多人时可能需要修改
+		//
+		//
+		//
+	{
+		PutDownBox();
+	}
+	if (!bIsThrowing)
+	{
+		AddActorWorldOffset(FVector(0, 0, 10), true);
+		BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12));
+	}
 	EyesFlipbookComponent->SetFlipbook(EyesFlipbook);
-	//将身体复原到原位
 	if (BodySpriteComponent)
 	{
 		BodySpriteComponent->SetRelativeLocation(BodySpriteInitialRelativeLoc);
 	}
-	
 	// 表情组件位置复位
 	if (EyesFlipbookComponent)
 	{
