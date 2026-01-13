@@ -77,6 +77,7 @@ AABoxBot::AABoxBot()
 	Camera->FieldOfView = 15.0f;
 	PlayerXVector=-1.0f;
 	BoxYVector=0;
+	RemainingBoxNumber=MaxBoxNumber;
 	
 	static ConstructorHelpers::FObjectFinder<UPaperSprite> BodySprite(TEXT("/Script/Paper2D.PaperSprite'/Game/MyBoxGame/Textures/Sheep/BaseSprite/SheepBodyBase_Sprite.SheepBodyBase_Sprite'"));
 	if (BodySprite.Object)
@@ -512,6 +513,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     				if (IsValid(BoxToKill))
     				{
     					BoxToKill->Destroy();
+    					RemainingBoxNumber++;
     				}
     				bIsRetracting=true;
     			}
@@ -525,6 +527,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     				if (IsValid(BoxToKill))
     				{
     					BoxToKill->Destroy();
+    					RemainingBoxNumber++;
     				}
     				UE_LOG(LogTemp, Log, TEXT("%d"),BoxChain.Num());
     				bIsRetracting=true;
@@ -608,6 +611,7 @@ void AABoxBot::SpawnBox(FVector Direction)
 		MoveIgnoreActorAdd(NewBox);
 		NewBox->Box->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 		BoxChain.Add(NewBox);
+		RemainingBoxNumber--;
 		UE_LOG(LogTemp, Log, TEXT("%d"),BoxChain.Num());
 		
 	}
@@ -740,6 +744,7 @@ void AABoxBot::PutDownBox()
 
     bClockSpawnLeft = false;
     bClockSpawnRight = false;
+	RemainingBoxNumber=MaxBoxNumber;
 }
 
 void AABoxBot::RemoveDroppedBoxes()
@@ -781,6 +786,54 @@ void AABoxBot::SwitchToStandFlipbook()
 		BodySpriteComponent->SetRelativeLocation(FVector(0,0,0));
 		EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,0));
 		FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
+	}
+}
+
+void AABoxBot::CollectJumpTeam(AActor* CurrentActor, TArray<AActor*>& OutTeam, TSet<AActor*>& Visited)
+{
+	if (!CurrentActor||Visited.Contains(CurrentActor))return;//判断当前物体存不存在或是不是已经被扫描过
+	
+	AActor* RootActor=CurrentActor;
+	while (RootActor->GetAttachParentActor())
+	{
+		RootActor=RootActor->GetAttachParentActor();//获取当前对象的根对象	
+	}
+	
+	if (Visited.Contains(RootActor))return;//如果跟对象已经被记录，跳出
+	TArray<AActor*> CurrentFamilyMembers;
+	if (AABoxBot* Bot=Cast<AABoxBot>(RootActor))
+	{
+		Visited.Add(Bot);
+		OutTeam.Add(Bot);
+		CurrentFamilyMembers.Add(Bot);
+		for (AActor* ChildActor : Bot->BoxChain)
+		{
+			Visited.Add(ChildActor);
+			OutTeam.Add(ChildActor);
+			CurrentFamilyMembers.Add(ChildActor);
+		}
+	}
+	else
+	{
+		Visited.Add(RootActor);
+		OutTeam.Add(RootActor);
+		CurrentFamilyMembers.Add(RootActor);
+		
+		TArray<AActor*> AttachedActors;
+		RootActor->GetAttachedActors(AttachedActors);
+		for (AActor* Member : AttachedActors)
+		{
+			if (Member && !Visited.Contains(Member))
+			{
+				Visited.Add(Member);
+				OutTeam.Add(Member);
+				CurrentFamilyMembers.Add(Member);
+			}
+		}
+	}
+	for (AActor* Member : CurrentFamilyMembers)
+	{
+		
 	}
 }
 
@@ -852,6 +905,7 @@ void AABoxBot::ThrowBox(float ThrowVector)
 
     bClockSpawnLeft = false;
     bClockSpawnRight = false;
+	RemainingBoxNumber=MaxBoxNumber;
 }
 
 
@@ -862,6 +916,7 @@ void AABoxBot::BeginSpawnBox()
 		if (BoxYVector*PlayerXVector<0)//如果方块在背面，执行放下
 		{
 			PutDownBox();
+			bIsThrowing=true;
 			return;
 		}
 		ThrowBox(PlayerXVector);

@@ -63,6 +63,7 @@ public:
 	void ThrowBox(float ThrowVector);
 	void SwitchToJumpFlipbook();// 切换跳跃动画
 	void SwitchToStandFlipbook();// 切换站立动画
+	void CollectJumpTeam(AActor* CurrentActor,TArray<AActor*>& OutTeam, TSet<AActor*>& Visited);//扫描所有物体，用于跳跃时抬升身上所有物体
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
@@ -72,6 +73,8 @@ public:
 	bool bIsThrowing;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BoxBoy Settings", meta = (ClampMin = "0"))
 	int32 MaxBoxNumber=5;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "BoxBoy Settings")
+	int32 RemainingBoxNumber;
 	float ShakeAmplitude = 1.4f;	// 颤动的偏移幅度（厘米）
 	float ShakeFrequency = 9.0f;	// 颤动的频率（每秒震动次数）
 	FVector BodySpriteInitialRelativeLoc;	// 记录初始相对位置（确保复位准确）
