@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MyHUD.h"
-#include "UMG_BoxGame.generated.h"
+#include "Blueprint/UserWidget.h"
+#include "MyUserWidget.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class MOUTH04_API AUMG_BoxGame : public AMyHUD
+class MOUTH04_API UMyUserWidget : public UUserWidget
 {
 	GENERATED_BODY()
 };

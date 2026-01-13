@@ -40,6 +40,7 @@ public:
 	class UPaperFlipbook* StandPaperFlipbook;
 	class UPaperFlipbook* HookPaperFlipbook;
 	class UPaperFlipbook* JumpPaperFlipbook;
+	class UPaperFlipbook* SquatPaperFlipbook;//下蹲
 	class UPaperSprite* BoxSheepB;
 	class UPaperFlipbook* SpawnBoxEyesFlipbook;
 	class UPaperFlipbook* EyesFlipbook;
@@ -60,6 +61,8 @@ public:
 	void PutDownBox();
 	void RemoveDroppedBoxes();
 	void ThrowBox(float ThrowVector);
+	void SwitchToJumpFlipbook();// 切换跳跃动画
+	void SwitchToStandFlipbook();// 切换站立动画
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
@@ -74,5 +77,12 @@ public:
 	FVector BodySpriteInitialRelativeLoc;	// 记录初始相对位置（确保复位准确）
 	float PlayerXVector;//玩家朝向
 	float BoxYVector;//第一个方块相对玩家的位置
+	
+	
+private:
+	UPROPERTY()
+	FTimerHandle SquatTimerHandle; // 下蹲动画的计时器
+	bool bIsPlayingSquat = false; // 是否正在播放下蹲动画
+	bool bWasOnGround = false;
 	
 };
