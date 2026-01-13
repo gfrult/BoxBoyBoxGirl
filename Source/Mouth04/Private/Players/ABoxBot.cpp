@@ -29,41 +29,43 @@ AABoxBot::AABoxBot()
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComponent"));
 	Camera=CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	FootFlipbookComponent=CreateDefaultSubobject<UPaperFlipbookComponent>(TEXT("FlipbookComponent"));
-	BotPhysMat = CreateDefaultSubobject<UPhysicalMaterial>(TEXT("BotPhysMat"));
+	BotPhysMat = CreateDefaultSubobject<UPhysicalMaterial>(TEXT("BotPhysMat"));//物理材质
 	BodySpriteComponent=CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("BodySpriteComponent"));
 	EyesFlipbookComponent=CreateDefaultSubobject<UPaperFlipbookComponent>(TEXT("EyesFlipbookComponent"));
 	
-	BodySpriteInitialRelativeLoc = BodySpriteComponent->GetRelativeLocation();// 记录初始相对位置
-	
+	//设置组件所在位置,身体和表情的序列素材组件在BoxBody身体碰撞盒子上,脚的序列动画组件在BoxFoot脚的球形碰撞体上
 	SpringArm->SetupAttachment(RootComponent);
 	Camera->SetupAttachment(SpringArm);
 	BodySpriteComponent->SetupAttachment(BoxBody);
+	BodySpriteInitialRelativeLoc = BodySpriteComponent->GetRelativeLocation();// 记录初始相对位置
 	BoxFoot->SetupAttachment(BoxBody);
 	FootFlipbookComponent->SetupAttachment(BoxFoot);
 	EyesFlipbookComponent->SetupAttachment(BoxBody);
 	
-	BotPhysMat->Restitution = 0.0f;  
-	BotPhysMat->Friction = 0.0f;     
-	BotPhysMat->Density = 1.0f;
+	//设置物理材质的初始化属性
+	BotPhysMat->Restitution = 0.0f;  //弹性
+	BotPhysMat->Friction = 0.0f;     //摩擦力
+	BotPhysMat->Density = 1.0f;		 //密度
 	BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Min;
 	BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
 	
+	//配置身体的碰撞体盒子的基础属性
 	BoxBody->SetPhysMaterialOverride(BotPhysMat);
-	BoxBody->SetBoxExtent(FVector(31.0f, 31.0f, 31.0f)); 
-	BoxBody->SetSimulatePhysics(true);
+	BoxBody->SetBoxExtent(FVector(30.0f, 30.0f, 30.0f)); //设置大小
+	BoxBody->SetSimulatePhysics(true);//开启boxbody的物理模拟,true:可以被推动,具有物理性;false:只有碰撞检测的效果
+	//锁定碰撞体盒子的旋转
 	BoxBody->GetBodyInstance()->bLockXRotation = true;
 	BoxBody->GetBodyInstance()->bLockYRotation = true;
 	BoxBody->GetBodyInstance()->bLockZRotation = true;
-	BoxBody->SetCollisionProfileName(TEXT("Pawn")); 
-	BoxBody->SetCollisionResponseToChannel(ECC_Visibility,ECR_Block);
-	
-	
+	BoxBody->SetCollisionProfileName(TEXT("Pawn")); //碰撞配置预设为Pawn
+	BoxBody->SetCollisionResponseToChannel(ECC_Visibility,ECR_Block);//视线检测通道改为阻挡,可以被Visibility检测到
+	//配置脚的球形碰撞体的基础属性
 	BoxFoot->SetPhysMaterialOverride(BotPhysMat);
 	BoxFoot->SetSphereRadius(30.0f);
-	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));
+	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));//相对Boxbody往下位移-12
 	BoxFoot->SetCollisionProfileName(TEXT("Pawn")); 
-	BoxFoot->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	BoxFoot->SetMassOverrideInKg(NAME_None, 0.0f, true);
+	BoxFoot->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);//PhysicsOnly:仅参与物理模拟（被碰撞推动、受力），不响应射线 / 重叠检测
+	BoxFoot->SetMassOverrideInKg(NAME_None, 0.0f, true);//BoxFoot的整体质量设为0
 	
 	SpringArm->SetRelativeRotation(FRotator(0,-90,0));
 	SpringArm->TargetArmLength = 4500.0f;
@@ -132,11 +134,24 @@ AABoxBot::AABoxBot()
 		JumpPaperFlipbook=JumpPF.Object;
 	}
 	
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook> SquatPF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/SheepFoot_Squat_Flipbook.SheepFoot_Squat_Flipbook'"));
+	if (SquatPF.Object)
+	{
+		SquatPaperFlipbook=SquatPF.Object;
+		UE_LOG(LogTemp, Log, TEXT("下蹲动画素材加载成功！")); // 成功日志
+	}//下蹲
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("下蹲动画素材加载失败！检查路径是否正确：/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/SheepFoot_Squat_Flipbook.SheepFoot_Squat_Flipbook")); // 失败日志
+	}
+	
+	
 	bIsSpawnMode=false;
 	bClockSpawnLeft=false;
 	bClockSpawnRight=false;
 	bIsInAir=false;
 	bIsPutDown=false;
+
 	PrimaryActorTick.bCanEverTick = true;	// 开启Tick（必须，否则颤动逻辑不执行）
 	bIsThrowing=false;
 }
@@ -152,6 +167,37 @@ void AABoxBot::BeginPlay()
 void AABoxBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	// 检测地面状态
+	bool bCurrentOnGround = CheckIsOnGround();
+	bool bJustLanded = !bWasOnGround && bCurrentOnGround;
+	bIsInAir = !bCurrentOnGround;
+	bWasOnGround = bCurrentOnGround;
+	
+	// 落地瞬间：播放下蹲动画 + 启动计时器
+	if (bJustLanded && FootFlipbookComponent && SquatPaperFlipbook)
+	{
+		// 切换下蹲动画
+		bIsPlayingSquat = true;
+		//将身体表情和腿同步往下相对位移-4
+		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,6));
+		BodySpriteComponent->SetRelativeLocation(FVector(0,0,-4));
+		EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,-4));
+		FootFlipbookComponent->SetFlipbook(SquatPaperFlipbook);
+		UE_LOG(LogTemp, Log, TEXT("Tick：切换下蹲动画"));	
+
+		// 取消之前的计时器
+		GetWorld()->GetTimerManager().ClearTimer(SquatTimerHandle);
+
+		// 2秒后切换为站立动画
+		GetWorld()->GetTimerManager().SetTimer(
+			SquatTimerHandle,
+			this,
+			&AABoxBot::SwitchToStandFlipbook,
+			0.1f,
+			false
+		);
+	}
+	
 	if (CheckIsOnGround())
 	{
 		bIsInAir=false;
@@ -238,13 +284,21 @@ void AABoxBot::RightFunction(float AxisValue)
 {
 	if (AxisValue==0)
 	{
-		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
+		if (bIsPlayingSquat==false)//添加了一个是否在播放下蹲动画的判断,不在下蹲时下使用站姿状态
+		{
+			BodySpriteComponent->SetRelativeLocation(FVector(0,0,0));
+			EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,0));
+			FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
+		}
 		FVector CurrentVel = BoxBody->GetPhysicsLinearVelocity();
 		BoxBody->SetPhysicsLinearVelocity(FVector(0, 0, CurrentVel.Z));
 		bClockSpawnLeft=false;
 		bClockSpawnRight=false;
 		if (bIsInAir)return;
-		FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
+		if (bIsPlayingSquat==false)//添加了一个是否在播放下蹲动画的判断,不在下蹲时下使用站姿状态
+		{
+			FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
+		}
 		return;
 	}
 	FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
@@ -280,6 +334,7 @@ void AABoxBot::RightFunction(float AxisValue)
 		PlayerXVector=(AxisValue > 0) ? 1 : -1;
 		EyesFlipbookComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
 		FootFlipbookComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
+		//跑步状态下,腿往下位移-4
 		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,6));
 		
 		//float DeltaTime = GetWorld()->GetDeltaSeconds();
@@ -361,6 +416,7 @@ void AABoxBot::RightFunction(float AxisValue)
 	}
 	
 }
+
 void AABoxBot::JumpFunction()
 {
 	FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
@@ -372,7 +428,33 @@ void AABoxBot::JumpFunction()
 	if (bIsPutDown)return;
 	if (!bIsInAir)
 	{
-		BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,400));
+		// 1. 先切换为下蹲动画
+		if (FootFlipbookComponent && SquatPaperFlipbook)
+		{
+			//将身体表情和腿同步往下相对位移-4
+			bIsPlayingSquat =true;
+			FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,6));
+			BodySpriteComponent->SetRelativeLocation(FVector(0,0,-4));
+			EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,-4));
+			FootFlipbookComponent->SetFlipbook(SquatPaperFlipbook);			
+			UE_LOG(LogTemp, Log, TEXT("JumpFunction：切换下蹲动画"));
+		}
+
+		// 2. 取消之前可能未执行的计时器（避免重复触发）
+		GetWorld()->GetTimerManager().ClearTimer(SquatTimerHandle);
+
+		// 3. 设置2秒后切换为跳跃动画
+		GetWorld()->GetTimerManager().SetTimer
+		(
+			SquatTimerHandle,
+			this,
+			&AABoxBot::SwitchToJumpFlipbook,//秒后执行的函数
+			0.1f, //下蹲时长
+			false//不循环
+		);
+		
+		//BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,400));//这段代码移动至SwitchToJumpFlipbook函数中,在计时结束才会触发
+
 		//BoxBody->AddImpulse(FVector(0,0,25000));
 		//BoxCollision->AddImpulse(GetActorUpVector().RotateAngleAxis(35.f,FVector::LeftVector)*25000.f);
 	}
@@ -673,6 +755,36 @@ void AABoxBot::RemoveDroppedBoxes()
 	DroppedBoxes.Empty();
 }
 
+//切换为跳跃动画
+void AABoxBot::SwitchToJumpFlipbook()
+{
+	bIsPlayingSquat = false;
+	UE_LOG(LogTemp, Log, TEXT("JSQ01计时器结束：切换为跳跃动画"));
+	if (FootFlipbookComponent && JumpPaperFlipbook)
+	{
+		// 施加跳跃力
+		FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
+		BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,400));
+		//将脚部组件动画且为跳跃
+		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
+		FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
+	}
+}
+
+// 切换为站立动画
+void AABoxBot::SwitchToStandFlipbook()
+{
+	bIsPlayingSquat = false;
+	UE_LOG(LogTemp, Log, TEXT("JSQ02计时器触发：切换为站立动画"));
+	if (FootFlipbookComponent && StandPaperFlipbook)
+	{
+		BodySpriteComponent->SetRelativeLocation(FVector(0,0,0));
+		EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,0));
+		FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
+	}
+}
+
+
 void AABoxBot::ThrowBox(float ThrowVector)
 {
 	if (BoxChain.Num() == 0) return;
@@ -787,6 +899,9 @@ void AABoxBot::EndSpawnBox()
 		BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12));
 	}
 	EyesFlipbookComponent->SetFlipbook(EyesFlipbook);
+	
+	
+	//将身体复原到原位
 	if (BodySpriteComponent)
 	{
 		BodySpriteComponent->SetRelativeLocation(BodySpriteInitialRelativeLoc);
