@@ -59,6 +59,7 @@ AABoxBot::AABoxBot()
 	BoxBody->GetBodyInstance()->bLockZRotation = true;
 	BoxBody->SetCollisionProfileName(TEXT("Pawn")); //碰撞配置预设为Pawn
 	BoxBody->SetCollisionResponseToChannel(ECC_Visibility,ECR_Block);//视线检测通道改为阻挡,可以被Visibility检测到
+	BoxBody->SetMassOverrideInKg(NAME_None, 100.0f, true);
 	//配置脚的球形碰撞体的基础属性
 	BoxFoot->SetPhysMaterialOverride(BotPhysMat);
 	BoxFoot->SetSphereRadius(30.0f);
@@ -161,7 +162,7 @@ AABoxBot::AABoxBot()
 void AABoxBot::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	RemainingBoxNumber=MaxBoxNumber;
 }
 
 // Called every frame
@@ -247,22 +248,35 @@ void AABoxBot::Tick(float DeltaTime)
 	}
 	if (DroppedBoxes.Num())
 	{
-		for (AActor* Box : DroppedBoxes)
+		ABoxActor* Leader = Cast<ABoxActor>(DroppedBoxes[0]);
+		if (Leader && Leader->Box)
 		{
-			FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f)); 
-			FCollisionQueryParams Params;
-			FHitResult HitResult;
-			Params.AddIgnoredActors(DroppedBoxes);
-			FVector Start = Box->GetActorLocation();
-			FVector End = Start + FVector(0,0,-5.0f); 
-			if (GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params))
+			float ZSpeed = Leader->Box->GetPhysicsLinearVelocity().Z;
+			
+			if (ZSpeed > 1.0f)
 			{
-				Cast<ABoxActor>(DroppedBoxes[0])->Box->SetLinearDamping(20.0f);
-				UE_LOG(LogTemp, Log, TEXT("下落阻尼20"));
-				break;
+				Leader->Box->SetLinearDamping(0.05f); 
 			}
-				Cast<ABoxActor>(DroppedBoxes[0])->Box->SetLinearDamping(1.0f);
-				UE_LOG(LogTemp, Log, TEXT("下落阻尼1"));
+			else
+			{
+				for (AActor* Box : DroppedBoxes)
+				{
+					FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f)); 
+					FCollisionQueryParams Params;
+					FHitResult HitResult;
+					Params.AddIgnoredActors(DroppedBoxes);
+					FVector Start = Box->GetActorLocation();
+					FVector End = Start + FVector(0,0,-5.0f); 
+					if (GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, Params))
+					{
+						Cast<ABoxActor>(DroppedBoxes[0])->Box->SetLinearDamping(20.0f);
+						//UE_LOG(LogTemp, Log, TEXT("下落阻尼20"));
+						break;
+					}
+					Cast<ABoxActor>(DroppedBoxes[0])->Box->SetLinearDamping(1.0f);
+					//UE_LOG(LogTemp, Log, TEXT("下落阻尼1"));
+				}
+			}
 		}
 	}
 }
@@ -490,7 +504,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     {
     	SpawnLoc = BoxChain.Last()->GetActorLocation()+ (Direction * 64.0f);
     	FVector Start = BoxChain.Last()->GetActorLocation();
-    	float TraceDist = (Direction.Z < 0) ? 59.0f : 35.0f; //判断检测方向，如果向下就检测一个方块的距离，否则只检测短距离
+    	float TraceDist = (Direction.Z < 0) ? 59.0f : 5.0f; //判断检测方向，如果向下就检测一个方块的距离，否则只检测短距离
     	FVector End = Start + (Direction * TraceDist);
     	FHitResult HitResult;
     	FCollisionQueryParams CollisionParameters;
@@ -768,8 +782,15 @@ void AABoxBot::SwitchToJumpFlipbook()
 	if (FootFlipbookComponent && JumpPaperFlipbook)
 	{
 		// 施加跳跃力
-		FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
-		BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,400));
+		/*FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
+		BoxBody->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,400));*/
+		TArray<AActor*> OutTeam;
+		TSet<AActor*> Visited;
+		CollectJumpTeam(this,OutTeam,Visited);
+		if (CanTeamJump(OutTeam))
+		{
+			ExecuteTeamJump(OutTeam);
+		}
 		//将脚部组件动画且为跳跃
 		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
 		FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
@@ -833,7 +854,80 @@ void AABoxBot::CollectJumpTeam(AActor* CurrentActor, TArray<AActor*>& OutTeam, T
 	}
 	for (AActor* Member : CurrentFamilyMembers)
 	{
+		bool bIsPlayer = Member->IsA<AABoxBot>();
+		bool bIsBox = Member->IsA<ABoxActor>(); 
+        
+		if (bIsPlayer || bIsBox)
+		{
+			FVector Start = Member->GetActorLocation();
+			FVector End = Start + FVector(0,0,10);
+			TArray<FHitResult> HitResults;
+			FCollisionQueryParams CollisionParameters;
+			CollisionParameters.AddIgnoredActor(Member);
+			CollisionParameters.AddIgnoredActor(this);
+			FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f));
+
+			bool IsHit = GetWorld()->SweepMultiByChannel(HitResults, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, CollisionParameters);
+			
+			if (IsHit)
+			{
+				for (const FHitResult& Hit : HitResults)
+				{
+					AActor* TopActor = Hit.GetActor();
+                    
+					if (IsValid(TopActor) && (TopActor->IsA<AABoxBot>() || TopActor->IsA<ABoxActor>()))
+					{
+						CollectJumpTeam(TopActor, OutTeam, Visited);
+					}
+				}
+			}
+		}
+	}
+}
+
+bool AABoxBot::CanTeamJump(const TArray<AActor*>& TeamMembers)
+{
+	FHitResult HitResult;
+	FCollisionQueryParams CollisionParameters;
+	CollisionParameters.AddIgnoredActors(TeamMembers);
+	CollisionParameters.AddIgnoredActor(this);
+	for (AActor* Member : TeamMembers)
+	{
+		if (!IsValid(Member)) continue;
+		FVector Start = Member->GetActorLocation();
+		FVector End = Start + FVector(0,0,10);
 		
+		FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f));
+
+		bool IsHit = GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, CollisionParameters);
+			
+		if (IsHit)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void AABoxBot::ExecuteTeamJump(const TArray<AActor*>& TeamMembers)
+{
+	TArray<AActor*> SortedTeam = TeamMembers;
+	SortedTeam.Sort([](const AActor& A, const AActor& B) {
+		return A.GetActorLocation().Z < B.GetActorLocation().Z;
+	});
+	for (int32 i = 0; i < SortedTeam.Num(); i++)
+	{
+		AActor* Member = SortedTeam[i];
+		UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Member->GetRootComponent());
+		if (Prim&&Prim->IsSimulatingPhysics())
+		{
+			FVector CurrentVelocity = Prim->GetPhysicsLinearVelocity();
+			float SpeedBonus = i * 10.0f;
+			Prim->SetPhysicsLinearVelocity(FVector(CurrentVelocity.X,CurrentVelocity.Y,400/*+SpeedBonus*/));
+			FVector a = Prim->GetPhysicsLinearVelocity();
+			UE_LOG(LogTemp, Log, TEXT("%s,%f"), *Member->GetName(),a.Z);
+			
+		}
 	}
 }
 
@@ -897,7 +991,7 @@ void AABoxBot::ThrowBox(float ThrowVector)
     	MyLeader->Box->RecreatePhysicsState();//刷新物理
     	MyLeader->Box->SetSimulatePhysics(true);
     }
-	MyLeader->Box->AddImpulse(FVector(20000*ThrowVector,0,40000));
+	MyLeader->Box->AddImpulse(FVector(15000*ThrowVector,0,40000));
 	DroppedBoxes = BoxChain;
 	
     BoxChain.Empty();     

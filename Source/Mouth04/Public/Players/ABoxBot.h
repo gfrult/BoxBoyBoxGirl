@@ -64,6 +64,8 @@ public:
 	void SwitchToJumpFlipbook();// 切换跳跃动画
 	void SwitchToStandFlipbook();// 切换站立动画
 	void CollectJumpTeam(AActor* CurrentActor,TArray<AActor*>& OutTeam, TSet<AActor*>& Visited);//扫描所有物体，用于跳跃时抬升身上所有物体
+	bool CanTeamJump(const TArray<AActor*>& TeamMembers);
+	void ExecuteTeamJump(const TArray<AActor*>& TeamMembers);
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
