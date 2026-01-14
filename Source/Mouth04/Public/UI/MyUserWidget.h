@@ -9,7 +9,7 @@ class UButton;	   //按钮控件
 class UTextBlock;  // 文本块控件
 class UImage;      // 图片控件
 class UTexture2D;  // 纹理类
-
+class UHorizontalBox;
 
 
 
@@ -44,9 +44,9 @@ public:
 	TObjectPtr<UImage> Image_P2;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Image_P2Box;
-	
-	bool bP2IsValid = false;
-	
+	//玩家2的条形框
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "UI|HorizontalBox")
+	TObjectPtr<UHorizontalBox> HorizontalBox_P2;
 
 	UFUNCTION(BlueprintCallable, Category = "UI|Text")
 	void SetTextBlockContent(
@@ -59,5 +59,8 @@ public:
 		UPARAM(DisplayName="图片路径") const FString& ImagePath
 	);
 
+
+	
+	
 	
 };

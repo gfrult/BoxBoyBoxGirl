@@ -26,7 +26,9 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
 	EGlobalPlayerType G_P1PlayerType = EGlobalPlayerType::Sheep;//在选择皮肤阶段进行 赋值
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
-	int32 G_P1MaxBoxNumber = 0;//在选择关卡阶段进行赋值
+	int32 G_P1MaxBoxNumber = 0;//在选择关卡阶段,通过读取关卡的数据 进行赋值
+	//进入关卡生成玩家子类时,通过读取GameInstance上记录的数据来确定type 和 最大盒子数
+	
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
 	int32 G_P1RemainingBoxNumber = 0;//由进入游戏后玩家的实时数据更新赋值
 	TSubclassOf<class AABoxBot> G_P1SelectedClass;//P1类型，G_P1SelectedClass.GetDefaultObject()->变量名
