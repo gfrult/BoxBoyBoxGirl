@@ -7,6 +7,7 @@
 #include "PaperSpriteComponent.h"
 #include "PaperSprite.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Components/SphereComponent.h"
 
 
 // Sets default values
@@ -18,8 +19,10 @@ ABoxActor::ABoxActor()
 	RootComponent=Box;
 	SpriteComponent=CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("SpriteComponent"));
 	BotPhysMat = CreateDefaultSubobject<UPhysicalMaterial>(TEXT("BotPhysMat"));
+	Wheel=CreateDefaultSubobject<USphereComponent>(TEXT("Wheel"));
 	
 	SpriteComponent->SetupAttachment(RootComponent);
+	Wheel->SetupAttachment(RootComponent);
 	
 	BotPhysMat->Restitution = 0.0f;  
 	BotPhysMat->Friction = 0.0f;     
@@ -32,13 +35,16 @@ ABoxActor::ABoxActor()
 	Box->SetCollisionProfileName(TEXT("BlockAll"));
 	Box->GetBodyInstance()->bLockYTranslation = true;
 	Box->SetMassOverrideInKg(NAME_None, 0.0f, true);
+	Box->SetSimulatePhysics(false);
 	
-	static ConstructorHelpers::FObjectFinder<UPaperSprite> PaperSprite(TEXT("/Script/Paper2D.PaperSprite'/Game/MyBoxGame/Textures/Sheep/Box/BoxSheepA_Sprite.BoxSheepA_Sprite'"));
-	if (PaperSprite.Object)
-	{
-		SpriteComponent->SetSprite(PaperSprite.Object);
-	}
-
+	Wheel->SetSphereRadius(1.0f);
+	Wheel->SetRelativeLocation(FVector(0.f, 0.f, -31.0f));
+	Wheel->SetPhysMaterialOverride(BotPhysMat);
+	Wheel->SetCollisionProfileName(TEXT("BlockAll"));
+	Wheel->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	Wheel->SetMassOverrideInKg(NAME_None, 0.0f, true);
+	Wheel->SetSimulatePhysics(false);
+	
 }
 
 // Called when the game starts or when spawned

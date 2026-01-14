@@ -36,13 +36,26 @@ public:
 	TArray<AActor*> DroppedBoxes;
 	class UPaperSpriteComponent* BodySpriteComponent;
 	class UPaperFlipbookComponent* EyesFlipbookComponent;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
+	class UPaperSprite* BodySprite;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperFlipbook* RunPaperFlipbook;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperFlipbook* StandPaperFlipbook;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperFlipbook* HookPaperFlipbook;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperFlipbook* JumpPaperFlipbook;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperFlipbook* SquatPaperFlipbook;//下蹲
-	class UPaperSprite* BoxSheepB;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
+	class UPaperSprite* BoxA;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
+	class UPaperSprite* BoxB;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperFlipbook* SpawnBoxEyesFlipbook;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperFlipbook* EyesFlipbook;
 	
 	void RightFunction(float AxisValue);
@@ -66,6 +79,8 @@ public:
 	void CollectJumpTeam(AActor* CurrentActor,TArray<AActor*>& OutTeam, TSet<AActor*>& Visited);//扫描所有物体，用于跳跃时抬升身上所有物体
 	bool CanTeamJump(const TArray<AActor*>& TeamMembers);
 	void ExecuteTeamJump(const TArray<AActor*>& TeamMembers);
+	void MoveUp(const TArray<AActor*>& TeamMembers);
+	void TryStandUp();
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
