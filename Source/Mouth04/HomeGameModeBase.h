@@ -17,5 +17,9 @@ public:
 	virtual void BeginPlay() override;
 	
 	AHomeGameModeBase();
-	
+	UPROPERTY(EditDefaultsOnly, Category = "Player Setup")
+	TSubclassOf<class AABoxBot> Player1Class;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player Setup")
+	TSubclassOf<class AABoxBot> Player2Class;
 };
