@@ -1,16 +1,63 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "MyUserWidget.generated.h"
 
-/**
- * 
- */
+//前向声明
+class UButton;	   //按钮控件
+class UTextBlock;  // 文本块控件
+class UImage;      // 图片控件
+class UTexture2D;  // 纹理类
+
+
+
+
 UCLASS()
 class MOUTH04_API UMyUserWidget : public UUserWidget
 {
 	GENERATED_BODY()
+public:
+	UFUNCTION()
+	void ShowSettingWidget();
+	virtual void NativeConstruct() override;//重写NativeConstruct()函数:通常用来做初始化逻辑（比如绑定按钮点击事件、播放初始动画）；
+	UPROPERTY(meta=(BindWidgetAnim),Transient)
+	TObjectPtr<UWidgetAnimation> MainMenuAnim;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> ShowSettingBtn;
+	
+	// 玩家1的控件变量:
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlock_P1MaxNum;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlock_P1CanUseNum;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_P1;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_P1Box;
+	// 玩家2的控件变量:
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlock_P2MaxNum;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> TextBlock_P2CanUseNum;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_P2;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_P2Box;
+	
+	bool bP2IsValid = false;
+	
+
+	UFUNCTION(BlueprintCallable, Category = "UI|Text")
+	void SetTextBlockContent(
+		UPARAM(DisplayName="目标文本块") UTextBlock* TargetTextBlock,
+		UPARAM(DisplayName="新文本内容") const FText& NewText	);
+	
+	UFUNCTION(BlueprintCallable, Category = "UI|Image")
+	void SetImageByPath(
+		UPARAM(DisplayName="目标图片控件") UImage* TargetImage,
+		UPARAM(DisplayName="图片路径") const FString& ImagePath
+	);
+
+	
 };

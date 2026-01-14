@@ -25,10 +25,6 @@ AHomeGameModeBase::AHomeGameModeBase()
 	{
 		HUDClass= MyHUDPath.Class;
 	}
-
-	
-	
-	
 	
 }
 

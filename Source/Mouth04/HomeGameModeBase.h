@@ -16,8 +16,6 @@ class MOUTH04_API AHomeGameModeBase : public AGameModeBase
 public:
 	virtual void BeginPlay() override;
 	
-
 	AHomeGameModeBase();
-
 	
 };
