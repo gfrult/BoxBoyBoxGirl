@@ -8,11 +8,12 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Engine/Texture2D.h"
-
+#include "GameInstance/MyGameInstance.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/HorizontalBox.h"
 
 void UMyUserWidget::NativeConstruct()
 {
-	
 	Super::NativeConstruct();// 必须调用父类的NativeConstruct，保证基类逻辑执行
 
 	// 播放主菜单初始化动画（绑定的MainMenuAnim）
@@ -28,18 +29,63 @@ void UMyUserWidget::NativeConstruct()
 		ShowSettingBtn->OnClicked.AddDynamic(this, &UMyUserWidget::ShowSettingWidget);
 	}
 	
-	//初始化玩家1的数值和图标
-	SetTextBlockContent(TextBlock_P1MaxNum,FText::FromString(TEXT("5")));
-	SetTextBlockContent(TextBlock_P1CanUseNum,FText::FromString(TEXT("4")));
-	SetImageByPath(Image_P1,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Sheep01.UI_Sheep01'"));
-	SetImageByPath(Image_P1Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxSheepA.UI_BoxSheepA'"));
-	
-	if (!bP2IsValid)
+	//获取 UE 全局唯一的 GameInstance 实例，并将其转换为我们自定义的UMyGameInstance类型，从而访问其中的全局变量（如枚举、数值）
+	UMyGameInstance* GameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (!IsValid(GameInstance))
 	{
-		SetTextBlockContent(TextBlock_P2MaxNum,FText::FromString(TEXT("5")));
-		SetTextBlockContent(TextBlock_P2CanUseNum,FText::FromString(TEXT("4")));
-		SetImageByPath(Image_P2,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Pig01.UI_Pig01'"));
-		SetImageByPath(Image_P2Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxpigA.UI_BoxpigA'"));
+		UE_LOG(LogTemp, Error, TEXT("UI中读取 GameInstance无效!!"));
+		return;
+	}
+	
+	//初始化玩家1的数值和图标
+	FText P1MaxBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P1MaxBoxNumber));
+	SetTextBlockContent(TextBlock_P1MaxNum,P1MaxBoxNumberText);
+	FText P1RemainingBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P1RemainingBoxNumber));	
+	SetTextBlockContent(TextBlock_P1CanUseNum,P1RemainingBoxNumberText);
+	EGlobalPlayerType P1Type = GameInstance->G_P1PlayerType;
+	switch (P1Type)
+	{
+		case EGlobalPlayerType::Sheep:
+			SetImageByPath(Image_P1,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Sheep01.UI_Sheep01'"));
+			SetImageByPath(Image_P1Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxSheepA.UI_BoxSheepA'"));
+			break;
+		case EGlobalPlayerType::Pig:
+			SetImageByPath(Image_P1,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Pig01.UI_Pig01'"));
+			SetImageByPath(Image_P1Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxpigA.UI_BoxpigA'"));	
+			break;
+		case EGlobalPlayerType::None:
+			UE_LOG(LogTemp, Error, TEXT("玩家1 type为None!!!!"));
+			break;
+	}
+
+	
+	//初始化玩家2的数值和图标
+	EGlobalPlayerType P2Type = GameInstance->G_P2PlayerType;
+	if (P2Type == EGlobalPlayerType::None)
+	{
+		HorizontalBox_P2->SetVisibility(ESlateVisibility::Hidden);//隐藏P2条形框
+	}
+	else
+	{
+		HorizontalBox_P2->SetVisibility(ESlateVisibility::Visible);
+		FText P2MaxBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P2MaxBoxNumber));
+		SetTextBlockContent(TextBlock_P2MaxNum,P2MaxBoxNumberText);
+		FText P2RemainingBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P2RemainingBoxNumber));	
+		SetTextBlockContent(TextBlock_P2CanUseNum,P2RemainingBoxNumberText);
+		switch (P2Type)
+        {
+        case EGlobalPlayerType::Sheep:
+        	SetImageByPath(Image_P2,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Sheep01.UI_Sheep01'"));
+        	SetImageByPath(Image_P2Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxSheepA.UI_BoxSheepA'"));
+        	break;
+        case EGlobalPlayerType::Pig:
+        	SetImageByPath(Image_P2,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Pig01.UI_Pig01'"));
+        	SetImageByPath(Image_P2Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxpigA.UI_BoxpigA'"));	
+        	break;
+        case EGlobalPlayerType::None:
+        	UE_LOG(LogTemp, Error, TEXT("玩家2 type为None!!!!"));
+        	break;
+		}
 	}
 	
 }
@@ -115,8 +161,6 @@ void UMyUserWidget::SetImageByPath(UImage* TargetImage, const FString& ImagePath
 			*ImagePath);
 	}
 }
-
-
 
 
 
