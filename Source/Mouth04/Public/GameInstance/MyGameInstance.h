@@ -6,9 +6,15 @@
 #include "Engine/GameInstance.h"
 #include "MyGameInstance.generated.h"
 
-/**
- * 
- */
+UENUM(BlueprintType) 
+enum class EGlobalPlayerType : uint8
+{
+	None,       
+	Sheep,     
+	Pig,     
+	Cow    
+};
+
 UCLASS()
 class MOUTH04_API UMyGameInstance : public UGameInstance
 {
@@ -18,20 +24,21 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	// ========== 全局共享变量 ==========
 	//P1
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
-	FString G_P1Name = TEXT("Sheep");//默认P1是小羊
+	EGlobalPlayerType G_P1PlayerType = EGlobalPlayerType::Sheep;//在选择皮肤阶段进行 赋值
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
-	int32 G_P1MaxBoxNumber = 0;
+	int32 G_P1MaxBoxNumber = 0;//在选择关卡阶段进行赋值
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
-	int32 G_P1RemainingBoxNumber = 0;
+	int32 G_P1RemainingBoxNumber = 0;//由进入游戏后玩家的实时数据更新赋值
 	
 	//P2
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
-	FString G_P2Name = TEXT("None");//默认P2是None,即单人模式
+	EGlobalPlayerType G_P2PlayerType = EGlobalPlayerType::None;
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
 	int32 G_P2MaxBoxNumber = 0;
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
 	int32 G_P2RemainingBoxNumber = 0;
-
 	
+
+
 	
 };
