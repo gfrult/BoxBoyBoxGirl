@@ -39,6 +39,8 @@ public:
 	TArray<AActor*> DroppedBoxes;
 	class UPaperSpriteComponent* BodySpriteComponent;
 	class UPaperFlipbookComponent* EyesFlipbookComponent;
+	class USphereComponent* Wheel1;
+	class USphereComponent* Wheel2;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperSprite* BodySprite;

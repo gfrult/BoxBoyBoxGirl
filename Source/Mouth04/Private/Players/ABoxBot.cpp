@@ -30,6 +30,8 @@ AABoxBot::AABoxBot()
 	BotPhysMat = CreateDefaultSubobject<UPhysicalMaterial>(TEXT("BotPhysMat"));//物理材质
 	BodySpriteComponent=CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("BodySpriteComponent"));
 	EyesFlipbookComponent=CreateDefaultSubobject<UPaperFlipbookComponent>(TEXT("EyesFlipbookComponent"));
+	Wheel1=CreateDefaultSubobject<USphereComponent>(TEXT("Wheel1"));
+	Wheel2=CreateDefaultSubobject<USphereComponent>(TEXT("Wheel2"));
 	
 	//设置组件所在位置,身体和表情的序列素材组件在BoxBody身体碰撞盒子上,脚的序列动画组件在BoxFoot脚的球形碰撞体上
 	SpringArm->SetupAttachment(RootComponent);
@@ -39,6 +41,8 @@ AABoxBot::AABoxBot()
 	BoxFoot->SetupAttachment(BoxBody);
 	FootFlipbookComponent->SetupAttachment(BoxFoot);
 	EyesFlipbookComponent->SetupAttachment(BoxBody);
+	Wheel1->SetupAttachment(BoxBody);
+	Wheel2->SetupAttachment(BoxBody);
 	
 	//设置物理材质的初始化属性
 	BotPhysMat->Restitution = 0.0f;  //弹性
@@ -49,22 +53,33 @@ AABoxBot::AABoxBot()
 	
 	//配置身体的碰撞体盒子的基础属性
 	BoxBody->SetPhysMaterialOverride(BotPhysMat);
-	BoxBody->SetBoxExtent(FVector(30.0f, 30.0f, 30.0f)); //设置大小
+	BoxBody->SetBoxExtent(FVector(29.5f, 29.5f, 29.5f)); //设置大小
 	BoxBody->SetSimulatePhysics(true);//开启boxbody的物理模拟,true:可以被推动,具有物理性;false:只有碰撞检测的效果
 	//锁定碰撞体盒子的旋转
 	BoxBody->GetBodyInstance()->bLockXRotation = true;
 	BoxBody->GetBodyInstance()->bLockYRotation = true;
 	BoxBody->GetBodyInstance()->bLockZRotation = true;
-	//BoxBody->SetCollisionProfileName(TEXT("Pawn")); //碰撞配置预设为Pawn
+	BoxBody->SetCollisionProfileName(TEXT("Pawn")); //碰撞配置预设为Pawn
 	BoxBody->SetCollisionResponseToChannel(ECC_Visibility,ECR_Block);//视线检测通道改为阻挡,可以被Visibility检测到
 	BoxBody->SetMassOverrideInKg(NAME_None, 100.0f, true);
 	//配置脚的球形碰撞体的基础属性
 	BoxFoot->SetPhysMaterialOverride(BotPhysMat);
-	BoxFoot->SetSphereRadius(30.0f);
+	BoxFoot->SetSphereRadius(29.5f);
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));//相对Boxbody往下位移-12
-	//BoxFoot->SetCollisionProfileName(TEXT("Pawn")); 
+	BoxFoot->SetCollisionProfileName(TEXT("Pawn")); 
 	BoxFoot->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);//PhysicsOnly:仅参与物理模拟（被碰撞推动、受力），不响应射线 / 重叠检测
 	BoxFoot->SetMassOverrideInKg(NAME_None, 0.0f, true);//BoxFoot的整体质量设为0
+	
+	Wheel1->SetPhysMaterialOverride(BotPhysMat);
+	Wheel2->SetPhysMaterialOverride(BotPhysMat);
+	Wheel1->SetMassOverrideInKg(NAME_None, 0.0f, true);
+	Wheel2->SetMassOverrideInKg(NAME_None, 0.0f, true);
+	Wheel1->SetRelativeLocation(FVector(-29.5f, 0.f, -29.5f));
+	Wheel2->SetRelativeLocation(FVector(29.5f, 0.f, -29.5f));
+	Wheel1->SetSphereRadius(2.5f);
+	Wheel2->SetSphereRadius(2.5f);
+	Wheel1->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	Wheel2->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	
 	SpringArm->SetRelativeRotation(FRotator(0,-90,0));
 	SpringArm->TargetArmLength = 4500.0f;
@@ -122,11 +137,15 @@ void AABoxBot::PossessedBy(AController* NewController)
 	{
 		BoxBody->SetCollisionObjectType(COLLISION_P1);
 		BoxFoot->SetCollisionObjectType(COLLISION_P1);
+		Wheel1->SetCollisionObjectType(COLLISION_P1);
+		Wheel2->SetCollisionObjectType(COLLISION_P1);
 	}
 	else if (MyID == 1)
 	{
 		BoxBody->SetCollisionObjectType(COLLISION_P2);
 		BoxFoot->SetCollisionObjectType(COLLISION_P2);
+		Wheel1->SetCollisionObjectType(COLLISION_P2);
+		Wheel2->SetCollisionObjectType(COLLISION_P2);
 	}
 }
 
