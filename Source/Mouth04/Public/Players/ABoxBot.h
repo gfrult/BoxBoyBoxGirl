@@ -6,6 +6,9 @@
 #include "GameFramework/Pawn.h"
 #include "ABoxBot.generated.h"
 
+#define COLLISION_P1 ECC_GameTraceChannel1 
+#define COLLISION_P2 ECC_GameTraceChannel2
+
 UCLASS()
 class MOUTH04_API AABoxBot : public APawn
 {
@@ -18,7 +21,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
+	virtual void PossessedBy(AController* NewController) override;
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -81,6 +84,7 @@ public:
 	void ExecuteTeamJump(const TArray<AActor*>& TeamMembers);
 	void MoveUp(const TArray<AActor*>& TeamMembers);
 	void TryStandUp();
+	void UploadtoGameInstance();
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
@@ -97,7 +101,7 @@ public:
 	FVector BodySpriteInitialRelativeLoc;	// 记录初始相对位置（确保复位准确）
 	float PlayerXVector;//玩家朝向
 	float BoxYVector;//第一个方块相对玩家的位置
-	
+	int8 MyID;
 	
 private:
 	UPROPERTY()
