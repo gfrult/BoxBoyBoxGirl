@@ -11,11 +11,14 @@
 #include "GameInstance/MyGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/HorizontalBox.h"
+#include "Math/UnrealMathUtility.h"
+#include "GameInstance/MyGameInstance.h"
+
 
 void UMyUserWidget::NativeConstruct()
 {
 	Super::NativeConstruct();// 必须调用父类的NativeConstruct，保证基类逻辑执行
-
+	
 	// 播放主菜单初始化动画（绑定的MainMenuAnim）
 	if (MainMenuAnim)
 	{
@@ -36,10 +39,25 @@ void UMyUserWidget::NativeConstruct()
 		UE_LOG(LogTemp, Error, TEXT("UI中读取 GameInstance无效!!"));
 		return;
 	}
-	
+		
+	// 订阅委托
+	CachedGameInstance=GameInstance;
+	CachedGameInstance->OnP1RemainingBoxNumberChanged.AddDynamic
+	(
+		this,
+		&UMyUserWidget::OnRemainingBoxNumberChanged
+	);
+	CachedGameInstance->OnP2RemainingBoxNumberChanged.AddDynamic
+	(
+		this,
+		&UMyUserWidget::OnP2RemainingBoxNumberChanged
+	);
+		
 	//初始化玩家1的数值和图标
 	FText P1MaxBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P1MaxBoxNumber));
 	SetTextBlockContent(TextBlock_P1MaxNum,P1MaxBoxNumberText);
+	//  初始化显示当前剩余箱子数（避免UI初始为空）
+	UpdateP1RemainingBoxNumberText(CachedGameInstance->GetP1RemainingBoxNumber());
 	FText P1RemainingBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P1RemainingBoxNumber));	
 	SetTextBlockContent(TextBlock_P1CanUseNum,P1RemainingBoxNumberText);
 	EGlobalPlayerType P1Type = GameInstance->G_P1PlayerType;
@@ -70,8 +88,7 @@ void UMyUserWidget::NativeConstruct()
 		HorizontalBox_P2->SetVisibility(ESlateVisibility::Visible);
 		FText P2MaxBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P2MaxBoxNumber));
 		SetTextBlockContent(TextBlock_P2MaxNum,P2MaxBoxNumberText);
-		FText P2RemainingBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P2RemainingBoxNumber));	
-		SetTextBlockContent(TextBlock_P2CanUseNum,P2RemainingBoxNumberText);
+		UpdateP2RemainingBoxNumberText(CachedGameInstance->GetP2RemainingBoxNumber());
 		switch (P2Type)
         {
         case EGlobalPlayerType::Sheep:
@@ -89,6 +106,18 @@ void UMyUserWidget::NativeConstruct()
 	}
 	
 }
+
+// UI销毁：取消委托订阅（可选，AddUObject已处理，但显式取消更安全）
+void UMyUserWidget::NativeDestruct()
+{
+	Super::NativeDestruct();
+
+	if (IsValid(CachedGameInstance))
+	{
+		CachedGameInstance->OnP1RemainingBoxNumberChanged.RemoveAll(this);
+	}
+}
+
 
 
 void UMyUserWidget::ShowSettingWidget()
@@ -164,4 +193,45 @@ void UMyUserWidget::SetImageByPath(UImage* TargetImage, const FString& ImagePath
 
 
 
+// 委托处理函数：接收剩余箱子数并更新UI
+void UMyUserWidget::OnRemainingBoxNumberChanged(int32 NewNumber)
+{
+	UpdateP1RemainingBoxNumberText(NewNumber);
+}
+
+void UMyUserWidget::OnP2RemainingBoxNumberChanged(int32 NewNumber)
+{
+	UpdateP2RemainingBoxNumberText(NewNumber);
+}
+
+
+
+// 现有箱子数更新函数
+void UMyUserWidget::UpdateP1RemainingBoxNumberText(int32 NewNumber)
+{
+	if (IsValid(TextBlock_P1CanUseNum))
+	{
+		// 格式化文本（可根据UI需求调整文案）
+		FText DisplayText = FText::FromString(FString::Printf(TEXT("%d"), NewNumber));
+		TextBlock_P1CanUseNum->SetText(DisplayText);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("MyUserWidget: TextBlock_P1CanUseNum控件为空"));
+	}
+}
+
+void UMyUserWidget::UpdateP2RemainingBoxNumberText(int32 NewNumber)
+{
+	if (IsValid(TextBlock_P2CanUseNum))
+	{
+		// 格式化文本（可根据UI需求调整文案）
+		FText DisplayText = FText::FromString(FString::Printf(TEXT("%d"), NewNumber));
+		TextBlock_P2CanUseNum->SetText(DisplayText);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("MyUserWidget: TextBlock_P2CanUseNum控件为空"));
+	}
+}
 
