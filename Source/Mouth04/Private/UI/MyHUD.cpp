@@ -12,8 +12,11 @@ void AMyHUD::BeginPlay()
 	
 }
 
+
 void AMyHUD::ShowMainMenu()
 {
+	
+	
 	if (!MainMenuWidget)// 如果主菜单Widget还没创建，就创建并显示
 	{
 		// 加载Widget蓝图类

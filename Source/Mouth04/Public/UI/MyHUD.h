@@ -14,8 +14,7 @@ class MOUTH04_API AMyHUD : public AHUD
 {
 	GENERATED_BODY()
 	UPROPERTY()
-	TObjectPtr<UMyUserWidget> MainMenuWidget;//前项声明,一个叫MainMenuWidget的安全指针类型
-
+	TObjectPtr<UMyUserWidget> MainMenuWidget;//成员:一个叫MainMenuWidget的安全指针类型
 
 public:
 	virtual void BeginPlay();

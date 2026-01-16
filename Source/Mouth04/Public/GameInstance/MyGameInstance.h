@@ -19,6 +19,15 @@ enum class EGlobalPlayerType : uint8
 	Cow    
 };
 
+UENUM(BlueprintType) 
+enum class EG_Widget : uint8
+{
+	Start,//开始界面+单人模式or双人模式选择
+	ChoseSkin,//皮肤选择界面
+	ChoseMap,//关卡选择界面
+	ExitGame//退出游戏界面
+};
+
 
 
 UCLASS()
@@ -27,7 +36,15 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	GENERATED_BODY()
 	public:
 	
-	// ========== 全局共享变量 ==========
+	// ========== 全局共享变量 ==========	
+	
+	UPROPERTY(BlueprintReadWrite, Category = "双人模式")
+	bool bIsTwoPlayerMode;//是否选择双人模式	
+	UPROPERTY()
+	EG_Widget G_WidgetChose = EG_Widget::Start;//标记需要加载的界面,初始化为start界面
+	
+	
+
 	//P1
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "P1AnimalConfig")
@@ -84,5 +101,5 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	UFUNCTION(BlueprintCallable, Category = "GlobalData|BoxNumber")
 	int32 GetP2RemainingBoxNumber() const;
 	
-	bool bIsTwoPlayerMode;//是否选择双人模式
+
 };
