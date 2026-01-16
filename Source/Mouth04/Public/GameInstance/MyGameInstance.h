@@ -84,5 +84,5 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	UFUNCTION(BlueprintCallable, Category = "GlobalData|BoxNumber")
 	int32 GetP2RemainingBoxNumber() const;
 	
-	
+	bool bIsTwoPlayerMode;//是否选择双人模式
 };

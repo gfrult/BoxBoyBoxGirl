@@ -121,6 +121,7 @@ void AABoxBot::BeginPlay()
 	EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,0));
 	FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
 	FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
+	 RespawnLocation=GetActorLocation();
 	
 }
 
@@ -276,6 +277,13 @@ void AABoxBot::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+void AABoxBot::FellOutOfWorld(const class UDamageType& dmgType)
+{
+	//Super::FellOutOfWorld(dmgType);
+	
+	Respawn();
 }
 
 void AABoxBot::RightFunction(float AxisValue)
@@ -1019,6 +1027,13 @@ void AABoxBot::UploadtoGameInstance()
 		}
 	}
 	else UE_LOG(LogTemp, Log, TEXT("ABoxBot：GameInstance无效，无法同步剩余箱子数"));
+}
+
+void AABoxBot::Respawn()
+{
+	SetActorLocation(RespawnLocation);
+	
+	BoxBody->SetPhysicsLinearVelocity(FVector(0.0f, 0.0f, 0.0f));
 }
 
 

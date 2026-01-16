@@ -29,6 +29,8 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
+	virtual void FellOutOfWorld(const class UDamageType& dmgType) override;
+	
 	class USpringArmComponent* SpringArm;
 	class UCameraComponent* Camera;
 	class UPaperFlipbookComponent* FootFlipbookComponent;
@@ -87,6 +89,7 @@ public:
 	void MoveUp(const TArray<AActor*>& TeamMembers);
 	void TryStandUp();
 	void UploadtoGameInstance();
+	void Respawn();
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
@@ -104,6 +107,7 @@ public:
 	float PlayerXVector;//玩家朝向
 	float BoxYVector;//第一个方块相对玩家的位置
 	int8 MyID;
+	FVector RespawnLocation;
 	
 private:
 	UPROPERTY()
