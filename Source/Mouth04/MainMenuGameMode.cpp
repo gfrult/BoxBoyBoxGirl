@@ -6,6 +6,10 @@
 #include "Players/ABoxBot.h"
 #include "Public/GameInstance/MyGameInstance.h"
 #include "Blueprint/UserWidget.h"
+#include "Players/MyPlayerController.h"
+#include "UI/StartHUD.h"
+
+
 
 void AMainMenuGameMode::BeginPlay()
 {
@@ -38,6 +42,15 @@ void AMainMenuGameMode::BeginPlay()
 AMainMenuGameMode::AMainMenuGameMode()
 {
 	DefaultPawnClass = nullptr;
+	//设置默认的HUD
+	static ConstructorHelpers::FClassFinder<AStartHUD> MyHUDPath(TEXT("/Script/Engine.Blueprint'/Game/Blueprints/UMG/BP_StartHUD.BP_StartHUD_C'"));
+	if(MyHUDPath.Class)
+	{
+		HUDClass= MyHUDPath.Class;
+	}
+	PlayerControllerClass=AMyPlayerController::StaticClass();
+	
+	
 }
 
 void AMainMenuGameMode::SetTwoPlayerMode(bool bEnable)
