@@ -22,14 +22,15 @@ public:
 	void SetTwoPlayerMode(bool bEnable);
 	
 	UFUNCTION(BlueprintCallable, Category = "Menu Logic")
-	void ConfirmPlayer1Selection(TSubclassOf<AABoxBot> SelectedClass);
+	void ConfirmPlayer1Selection(TSubclassOf<AABoxBot> SelectedClass, EGlobalPlayerType PlayerType);
 	
 	UFUNCTION(BlueprintCallable, Category = "Menu Logic")
-	void ConfirmPlayer2Selection(TSubclassOf<AABoxBot> SelectedClass);
+	void ConfirmPlayer2Selection(TSubclassOf<AABoxBot> SelectedClass, EGlobalPlayerType PlayerType);
 	
 	UFUNCTION(BlueprintCallable, Category = "Menu Logic")
 	void StartGameLevel(FName LevelName = "Map_Level1");
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UUserWidget> MainMenuWidgetClass;
+	
 };

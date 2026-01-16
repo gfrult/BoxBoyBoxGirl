@@ -1019,11 +1019,13 @@ void AABoxBot::UploadtoGameInstance()
 		//将当前类的RemainingBoxNumber值赋给GameInstance中的G_P1RemainingBoxNumber
 		if (MyID==0)
 		{
-			GameInstance->G_P1RemainingBoxNumber=this->RemainingBoxNumber;
+			GameInstance->SetP1RemainingBoxNumber(this->RemainingBoxNumber);
+			UE_LOG(LogTemp, Log, TEXT("角色1,%d"),GameInstance->G_P1RemainingBoxNumber);
 		}
 		if (MyID==1)
 		{
-			GameInstance->G_P2RemainingBoxNumber=this->RemainingBoxNumber;
+			GameInstance->SetP2RemainingBoxNumber(this->RemainingBoxNumber);
+			UE_LOG(LogTemp, Log, TEXT("角色2,%d"),GameInstance->G_P2RemainingBoxNumber);
 		}
 	}
 	else UE_LOG(LogTemp, Log, TEXT("ABoxBot：GameInstance无效，无法同步剩余箱子数"));

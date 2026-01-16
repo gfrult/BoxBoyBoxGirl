@@ -59,40 +59,37 @@ void AMainMenuGameMode::SetTwoPlayerMode(bool bEnable)
 	if (GI)
 	{
 		GI->bIsTwoPlayerMode = bEnable;
-		FString Msg = bEnable ? TEXT("Mode: 2 Players") : TEXT("Mode: 1 Player");
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, Msg);
+		
 	}
 }
 
-void AMainMenuGameMode::ConfirmPlayer1Selection(TSubclassOf<AABoxBot> SelectedClass)
+void AMainMenuGameMode::ConfirmPlayer1Selection(TSubclassOf<AABoxBot> SelectedClass, EGlobalPlayerType PlayerType)
 {
 	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
 	if (GI && SelectedClass)
 	{
 		GI->G_P1SelectedClass = SelectedClass;
+		GI->G_P1PlayerType = PlayerType;
 		
-		FString ClassName = SelectedClass->GetName();
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("P1 Selected: ") + ClassName);
+	
 	}
 }
 
-void AMainMenuGameMode::ConfirmPlayer2Selection(TSubclassOf<AABoxBot> SelectedClass)
+void AMainMenuGameMode::ConfirmPlayer2Selection(TSubclassOf<AABoxBot> SelectedClass, EGlobalPlayerType PlayerType)
 {
 	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
 	if (GI && SelectedClass)
 	{
 		GI->G_P2SelectedClass = SelectedClass;
-		
+		GI->G_P2PlayerType = PlayerType;
 		FString ClassName = SelectedClass->GetName();
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("P2 Selected: ") + ClassName);
 	}
 }
 
 void AMainMenuGameMode::StartGameLevel(FName LevelName)
 {
 	if (LevelName.IsNone()) return;
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Loading Level..."));
+	
 	
 	// 切换关卡
 	UGameplayStatics::OpenLevel(this, LevelName);
