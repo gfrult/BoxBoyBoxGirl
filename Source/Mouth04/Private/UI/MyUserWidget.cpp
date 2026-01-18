@@ -79,7 +79,7 @@ void UMyUserWidget::NativeConstruct()
 	
 	//初始化玩家2的数值和图标
 	EGlobalPlayerType P2Type = GameInstance->G_P2PlayerType;
-	if (P2Type == EGlobalPlayerType::None)
+	if (GameInstance->bIsTwoPlayerMode==false)
 	{
 		HorizontalBox_P2->SetVisibility(ESlateVisibility::Hidden);//隐藏P2条形框
 	}

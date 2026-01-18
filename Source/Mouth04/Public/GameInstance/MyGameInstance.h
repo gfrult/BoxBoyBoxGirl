@@ -65,7 +65,7 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "P2AnimalConfig")
 	TSubclassOf<AABoxBot> G_P2SelectedClass; //存储AABoxBot类的子类型
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
-	EGlobalPlayerType G_P2PlayerType = EGlobalPlayerType::None;
+	EGlobalPlayerType G_P2PlayerType = EGlobalPlayerType::Pig;
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
 	int32 G_P2MaxBoxNumber = 0;
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
