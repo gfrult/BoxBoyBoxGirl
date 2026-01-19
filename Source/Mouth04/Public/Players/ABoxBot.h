@@ -47,16 +47,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperSprite* BodySprite;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
-	class UPaperFlipbook* RunPaperFlipbook;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
-	class UPaperFlipbook* StandPaperFlipbook;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
-	class UPaperFlipbook* HookPaperFlipbook;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
-	class UPaperFlipbook* JumpPaperFlipbook;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
-	class UPaperFlipbook* SquatPaperFlipbook;//下蹲
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperSprite* BoxA;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperSprite* BoxB;
@@ -64,6 +54,20 @@ public:
 	class UPaperFlipbook* SpawnBoxEyesFlipbook;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
 	class UPaperFlipbook* EyesFlipbook;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
+	class UTexture2D* PlayerType;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Assets | Visuals")
+	class UTexture2D* BoxType;
+	
+	class UPaperFlipbook* RunPaperFlipbook;
+	
+	class UPaperFlipbook* StandPaperFlipbook;
+	
+	class UPaperFlipbook* HookPaperFlipbook;
+	
+	class UPaperFlipbook* JumpPaperFlipbook;
+	
+	class UPaperFlipbook* SquatPaperFlipbook;//下蹲
 	
 	void RightFunction(float AxisValue);
 	void JumpFunction();
@@ -90,6 +94,8 @@ public:
 	void TryStandUp();
 	void UploadtoGameInstance();
 	void Respawn();
+	UFUNCTION()
+	void  OnSpikeHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;

@@ -3,7 +3,6 @@
 
 #include "HomeGameModeBase.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "Players/ABoxBot.h"
 #include "Players/MyPlayerController.h"
 #include "Actors/SharedCamera.h"
@@ -69,7 +68,7 @@ void AHomeGameModeBase::BeginPlay()
 
     AABoxBot* Bot2 = nullptr;
 
-    if (bIsTwoPlayer) // 👈 关键改动：这里加了判断！
+    if (bIsTwoPlayer) 
     {
         // 只有双人模式才创建第2个控制器
         UGameplayStatics::CreatePlayer(this, 1, true);

@@ -12,7 +12,10 @@
 #include "Components/SphereComponent.h"
 #include "Actors/BoxActor.h"
 #include "PaperSpriteComponent.h"
-#include "GameFramework/PlayerState.h"
+#include "PaperTileMapComponent.h" 
+#include "PaperTileSet.h"
+#include "PaperTileLayer.h"
+#include "PaperTileMap.h"
 #include "GameInstance/MyGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -62,13 +65,16 @@ AABoxBot::AABoxBot()
 	BoxBody->SetCollisionProfileName(TEXT("Pawn")); //碰撞配置预设为Pawn
 	BoxBody->SetCollisionResponseToChannel(ECC_Visibility,ECR_Block);//视线检测通道改为阻挡,可以被Visibility检测到
 	BoxBody->SetMassOverrideInKg(NAME_None, 100.0f, true);
+	BoxBody->SetNotifyRigidBodyCollision(true);
 	//配置脚的球形碰撞体的基础属性
 	BoxFoot->SetPhysMaterialOverride(BotPhysMat);
 	BoxFoot->SetSphereRadius(29.5f);
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));//相对Boxbody往下位移-12
 	BoxFoot->SetCollisionProfileName(TEXT("Pawn")); 
-	BoxFoot->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);//PhysicsOnly:仅参与物理模拟（被碰撞推动、受力），不响应射线 / 重叠检测
+	BoxFoot->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	BoxFoot->SetCollisionResponseToChannel(ECC_Visibility,ECR_Ignore);
 	BoxFoot->SetMassOverrideInKg(NAME_None, 0.0f, true);//BoxFoot的整体质量设为0
+	BoxFoot->SetNotifyRigidBodyCollision(true);
 	
 	Wheel1->SetPhysMaterialOverride(BotPhysMat);
 	Wheel2->SetPhysMaterialOverride(BotPhysMat);
@@ -92,6 +98,36 @@ AABoxBot::AABoxBot()
 	PlayerXVector=-1.0f;
 	BoxYVector=0;
 	RemainingBoxNumber=MaxBoxNumber;
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook>RunPF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/PF_SheepFootRun.PF_SheepFootRun'"));
+	if (RunPF.Object)
+	{
+		RunPaperFlipbook=RunPF.Object;
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook>StandPF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/PF_SheepFoot_Stand.PF_SheepFoot_Stand'"));
+	if (StandPF.Object)
+	{
+		StandPaperFlipbook=StandPF.Object;
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook>HookPF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/SheepFoot_Suspended.SheepFoot_Suspended'"));
+	if (HookPF.Object)
+	{
+		HookPaperFlipbook=HookPF.Object;
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook>JumpPF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/PF_SheepFootJump.PF_SheepFootJump'"));
+	if (JumpPF.Object)
+	{
+		JumpPaperFlipbook=JumpPF.Object;
+	}
+	
+	static ConstructorHelpers::FObjectFinder<UPaperFlipbook>SquatPF(TEXT("/Script/Paper2D.PaperFlipbook'/Game/MyBoxGame/Textures/Sheep/PaperFilpbook/SheepFoot_Squat_Flipbook.SheepFoot_Squat_Flipbook'"));
+	if (SquatPF.Object)
+	{
+		SquatPaperFlipbook=SquatPF.Object;
+	}
+	
 	
 	BodySpriteComponent->SetSprite(BodySprite);
 	
@@ -109,6 +145,7 @@ AABoxBot::AABoxBot()
 
 	PrimaryActorTick.bCanEverTick = true;	// 开启Tick（必须，否则颤动逻辑不执行）
 	bIsThrowing=false;
+	
 }
 
 // Called when the game starts or when spawned
@@ -121,7 +158,10 @@ void AABoxBot::BeginPlay()
 	EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,0));
 	FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
 	FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
-	 RespawnLocation=GetActorLocation();
+	RespawnLocation=GetActorLocation();
+	
+	BoxFoot->OnComponentHit.AddDynamic(this,&AABoxBot::OnSpikeHit);
+	//BoxBody->OnComponentHit.AddDynamic(this,&AABoxBot::OnSpikeHit);
 	
 }
 
@@ -340,6 +380,7 @@ void AABoxBot::RightFunction(float AxisValue)
 		PlayerXVector=(AxisValue > 0) ? 1 : -1;
 		EyesFlipbookComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
 		FootFlipbookComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
+		BodySpriteComponent->SetRelativeRotation(FRotator(0,RotationYaw,0));
 		//跑步状态下,腿往下位移-4
 		FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,6));
 		
@@ -523,6 +564,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     	SpawnLoc = BoxChain.Last()->GetActorLocation()+ (Direction * 64.0f);
     	FVector Start = BoxChain.Last()->GetActorLocation();
     	float TraceDist = (Direction.Z < 0) ? 59.0f : 6.0f; //判断检测方向，如果向下就检测一个方块的距离，否则只检测短距离
+    	TraceDist = (Direction.Z > 0) ? 59.0f : 20.0f;
     	FVector End = Start + (Direction * TraceDist);
     	FHitResult HitResult;
     	FCollisionQueryParams CollisionParameters;
@@ -568,9 +610,38 @@ void AABoxBot::SpawnBox(FVector Direction)
     			}
     		}
     		if (bIsRetracting) return;
-    		if (Direction.Z >= 0) //不是向下
+    		if (Direction.Z == 0)return;
+    		if (Direction.Z > 0) //向上
     		{
-    			return; 
+			    UE_LOG(LogTemp, Log, TEXT("向上"));
+			    UE_LOG(LogTemp, Log, TEXT("%s"),*HitResult.GetActor()->GetName());
+    			if (Cast<AABoxBot>(HitResult.GetActor())||Cast<AABoxBot>(HitResult.GetActor()))
+    			{
+				    UE_LOG(LogTemp, Log, TEXT("向上检测到"));
+    				TArray<AActor*> OutTeam;
+    				TSet<AActor*> Visited;
+    				CollectJumpTeam(HitResult.GetActor(),OutTeam,Visited);
+    			
+    				if (!CanTeamJump(OutTeam))
+    				{
+    					return;
+    				}
+    				if (BoxChain.Num()>=MaxBoxNumber)return;
+    				
+    				for (AActor* Member:OutTeam)
+    				{
+    					if (!IsValid(Member)) continue;
+		
+    					if (Member->GetAttachParentActor() == nullptr)
+    					{
+    						Member->AddActorLocalOffset(FVector(0, 0, 64), false);
+    					}
+    				}
+    			}
+			    else
+			    {
+				    return;
+			    }
     		}
     		if (Direction.Z < 0) //向下检测到非自身的物体
     		{
@@ -583,14 +654,19 @@ void AABoxBot::SpawnBox(FVector Direction)
     				{
 					    UE_LOG(LogTemp, Log, TEXT("CurrentGap < 60.0f"));
     					float LiftHeight = 62 - CurrentGap;//需要抬升的高度
-    					bool bRoofBlocked = false; 
+    					
     					
     					FHitResult RoofHit;
     					FCollisionQueryParams RoofParams;
     					RoofParams.AddIgnoredActor(this);
     					RoofParams.AddIgnoredActors(BoxChain);
+    					
+    					TArray<AActor*> OutTeam;
+    					TSet<AActor*> Visited;
+    					CollectJumpTeam(this,OutTeam,Visited);
+    					
     					//检测玩家本身上方有没有空位
-    					if (GetWorld()->SweepSingleByChannel(RoofHit, GetActorLocation(), GetActorLocation() + FVector(0,0,LiftHeight), FQuat::Identity, ECC_Visibility, CheckShape, RoofParams))
+    					/*if (GetWorld()->SweepSingleByChannel(RoofHit, GetActorLocation(), GetActorLocation() + FVector(0,0,LiftHeight), FQuat::Identity, ECC_Visibility, CheckShape, RoofParams))
     					{
     						bRoofBlocked = true;
     					}
@@ -609,11 +685,24 @@ void AABoxBot::SpawnBox(FVector Direction)
     								break; 
     							}
     						}
+    					}*/
+    					if (!CanTeamJump(OutTeam))
+    					{
+    						return;
     					}
-    					if (bRoofBlocked) return;//如果没有位置就不生成
+    					//if (bRoofBlocked) return;//如果没有位置就不生成
     					if (BoxChain.Num()>=MaxBoxNumber)return;
-    					BoxBody->SetPhysicsLinearVelocity(FVector::ZeroVector);
-    					AddActorWorldOffset(FVector(0, 0, LiftHeight), false);//先抬高玩家
+    					/*BoxBody->SetPhysicsLinearVelocity(FVector::ZeroVector);
+    					AddActorWorldOffset(FVector(0, 0, LiftHeight), false);//先抬高玩家*/
+    					for (AActor* Member:OutTeam)
+    					{
+    						if (!IsValid(Member)) continue;
+		
+    						if (Member->GetAttachParentActor() == nullptr)
+    						{
+    							Member->AddActorLocalOffset(FVector(0, 0, LiftHeight), false);
+    						}
+    					}
     					
     					SpawnLoc.Z = HitResult.ImpactPoint.Z + 28;
 					    UE_LOG(LogTemp, Log, TEXT("%f"),LiftHeight);
@@ -627,13 +716,51 @@ void AABoxBot::SpawnBox(FVector Direction)
     	if (Direction.Z<0)return;
     	BoxYVector=Direction.X;
     	SpawnLoc = GetActorLocation() + (Direction * 64.0f);
-    	FVector Start = BoxBody->GetComponentLocation();
-    	FVector End = Start + (Direction * 35.0f);
+    	FVector Start =GetActorLocation();
+    	float TraceDist = (Direction.Z > 0) ? 20.0f : 6.0f; 
+    	FVector End = Start + (Direction * TraceDist);
     	FHitResult HitResult;
     	FCollisionQueryParams CollisionParameters;
     	CollisionParameters.AddIgnoredActor(this);
-    	if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility,CollisionParameters))return;
     	
+    	FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f));
+
+    	bool IsHit = GetWorld()->SweepSingleByChannel(HitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, CollisionParameters);
+    	
+    	if (IsHit) //向上
+    	{
+    		if (Direction.Z == 0)return;
+    		if (Direction.Z > 0)
+    		{
+			    UE_LOG(LogTemp, Error, TEXT("%s"),*HitResult.GetActor()->GetName());
+    			if (Cast<AABoxBot>(HitResult.GetActor())||Cast<AABoxBot>(HitResult.GetActor()))
+    			{
+    				TArray<AActor*> OutTeam;
+    				TSet<AActor*> Visited;
+    				CollectJumpTeam(HitResult.GetActor(),OutTeam,Visited);
+    			
+    				if (!CanTeamJump(OutTeam))
+    				{
+    					return;
+    				}
+    				if (BoxChain.Num()>=MaxBoxNumber)return;
+    				
+    				for (AActor* Member:OutTeam)
+    				{
+    					if (!IsValid(Member)) continue;
+		
+    					if (Member->GetAttachParentActor() == nullptr)
+    					{
+    						Member->AddActorLocalOffset(FVector(0, 0, 64), false);
+    					}
+    				}
+    			}
+    			else
+    			{
+    				return;
+    			}
+    		}
+    	}
     }
 	if (BoxChain.Num() >= MaxBoxNumber) return;
 
@@ -650,6 +777,14 @@ void AABoxBot::SpawnBox(FVector Direction)
 		
 		ECollisionChannel MyChannel = (MyID == 0) ? COLLISION_P1 : COLLISION_P2;
 		ECollisionChannel OtherChannel = (MyID == 0) ? COLLISION_P2 : COLLISION_P1;
+		
+		NewBox->BotPhysMat->Restitution = 0.0f;  
+		NewBox->BotPhysMat->Friction = 1.0f;     
+		NewBox->BotPhysMat->Density = 1.0f;
+		NewBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
+		NewBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
+     
+		NewBox->Box->SetPhysMaterialOverride(NewBox->BotPhysMat);
     
 		NewBox->Box->SetCollisionObjectType(MyChannel); 
 		
@@ -762,6 +897,7 @@ void AABoxBot::PutDownBox()
             	MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
             	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
             	
+            	MyBox->Wheel->SetPhysMaterialOverride(MyBox->BotPhysMat);
             	MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
             	MyBox->SpriteComponent->SetSprite(BoxB);
             	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
@@ -784,7 +920,7 @@ void AABoxBot::PutDownBox()
     	MyLeader->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
         	
     	MyLeader->Box->SetPhysMaterialOverride(MyLeader->BotPhysMat);
-    	
+    	MyLeader->Wheel->SetPhysMaterialOverride(MyLeader->BotPhysMat);
     	MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
     	
     	MyLeader->Box->SetLinearDamping(1.0f);
@@ -1038,6 +1174,39 @@ void AABoxBot::Respawn()
 	BoxBody->SetPhysicsLinearVelocity(FVector(0.0f, 0.0f, 0.0f));
 }
 
+void AABoxBot::OnSpikeHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
+{
+	UPaperTileMapComponent* HitCom=Cast<UPaperTileMapComponent>(OtherComp);
+	
+	if (HitCom)
+	{
+		FVector ImpactPoint = Hit.ImpactPoint;
+		FVector CheckPoint = ImpactPoint+FVector(0,0,-5);
+		
+		FVector LocalPos = HitCom->GetComponentTransform().InverseTransformPosition(CheckPoint);
+		
+		int32 TileWidth=HitCom->TileMap->TileWidth;
+		int32 TileHeight=HitCom->TileMap->TileHeight;
+		
+		int32 TileX=FMath::FloorToInt(LocalPos.X/TileWidth);
+		int32 TileY=FMath::RoundToInt(-LocalPos.Z/TileHeight);
+		UE_LOG(LogTemp, Log, TEXT("%d,%d"),TileX,TileY);
+		FPaperTileInfo TileInfo=HitCom->GetTile(TileX,TileY,0);
+		if (TileInfo.TileSet != nullptr && TileInfo.TileSet->GetTileUserData(TileInfo.GetTileIndex()).IsValid())
+		{
+			UE_LOG(LogTemp, Log, TEXT("%s"),*TileInfo.TileSet->GetTileUserData(TileInfo.GetTileIndex()).ToString());
+		}
+		if (TileInfo.IsValid()&&TileInfo.TileSet)
+		{
+			if (TileInfo.TileSet->GetTileUserData(TileInfo.GetTileIndex())=="Spike")
+			{
+				Respawn();
+			}
+		}
+	}
+}
+
 
 void AABoxBot::ThrowBox(float ThrowVector)
 {
@@ -1064,6 +1233,7 @@ void AABoxBot::ThrowBox(float ThrowVector)
             	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
             	
             	MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
+            	MyBox->Wheel->SetPhysMaterialOverride(MyBox->BotPhysMat);
             	MyBox->SpriteComponent->SetSprite(BoxB);
             	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
             }
@@ -1085,6 +1255,7 @@ void AABoxBot::ThrowBox(float ThrowVector)
     	MyLeader->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
         	
     	MyLeader->Box->SetPhysMaterialOverride(MyLeader->BotPhysMat);
+    	MyLeader->Wheel->SetPhysMaterialOverride(MyLeader->BotPhysMat);
     	
     	MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
     	
