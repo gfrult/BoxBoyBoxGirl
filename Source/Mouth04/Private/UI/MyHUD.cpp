@@ -38,7 +38,7 @@ void AMyHUD::HideMainMenu()
 
 	if (MainMenuWidget)	// 如果主菜单Widget存在，就隐藏/移除
 	{
-		MainMenuWidget->RemoveFromViewport();  // 从屏幕移除
+		//MainMenuWidget->RemoveFromViewport();  // 从屏幕移除
 		// 销毁Widget（根据需求，也可保留实例后续复用）
 		// MainMenuWidget->Destroy();
 		// MainMenuWidget = nullptr;
