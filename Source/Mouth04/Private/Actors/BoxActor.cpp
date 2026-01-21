@@ -38,7 +38,7 @@ ABoxActor::ABoxActor()
 	Box->SetSimulatePhysics(false);
 	
 	Wheel->SetSphereRadius(1.0f);
-	Wheel->SetRelativeLocation(FVector(0.f, 0.f, -31.0f));
+	Wheel->SetRelativeLocation(FVector(0.f, 0.f, -30.8f));
 	Wheel->SetPhysMaterialOverride(BotPhysMat);
 	Wheel->SetCollisionProfileName(TEXT("BlockAll"));
 	Wheel->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);

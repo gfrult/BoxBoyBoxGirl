@@ -210,7 +210,7 @@ void AABoxBot::Tick(float DeltaTime)
 		BodySpriteComponent->SetRelativeLocation(FVector(0,0,-4));
 		EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,-4));
 		FootFlipbookComponent->SetFlipbook(SquatPaperFlipbook);
-		UE_LOG(LogTemp, Log, TEXT("Tick：切换下蹲动画"));	
+		//UE_LOG(LogTemp, Log, TEXT("Tick：切换下蹲动画"));	
 
 		// 取消之前的计时器
 		GetWorld()->GetTimerManager().ClearTimer(SquatTimerHandle);
@@ -422,12 +422,10 @@ void AABoxBot::RightFunction(float AxisValue)
 					AParams.AddIgnoredActor(this);
 					FHitResult AHitResult;
 					GetWorld()->SweepSingleByChannel(AHitResult, Start, End, FQuat::Identity, ECC_Visibility, CheckShape, AParams);
-					if (AHitResult.GetActor())
-					{UE_LOG(LogTemp, Log, TEXT("%s"),*AHitResult.GetActor()->GetName());}
+					
 					if (DroppedBoxes.Contains(AHitResult.GetActor()))
 					{
 						bHitWall = true;
-						UE_LOG(LogTemp, Log, TEXT("L"));
 					}
 						
 					for (AActor* DroppedBox : DroppedBoxes)
@@ -511,7 +509,7 @@ void AABoxBot::JumpFunction()
 			BodySpriteComponent->SetRelativeLocation(FVector(0,0,-4));
 			EyesFlipbookComponent->SetRelativeLocation(FVector(0,5,-4));
 			FootFlipbookComponent->SetFlipbook(SquatPaperFlipbook);			
-			UE_LOG(LogTemp, Log, TEXT("JumpFunction：切换下蹲动画"));
+			//UE_LOG(LogTemp, Log, TEXT("JumpFunction：切换下蹲动画"));
 		}
 
 		// 2. 取消之前可能未执行的计时器（避免重复触发）
@@ -576,7 +574,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     	//判断是回收还是生成新的方块
     	if (IsHit)//回收或向下生成
     	{
-    		UE_LOG(LogTemp, Log, TEXT("111111"));
+    		//UE_LOG(LogTemp, Log, TEXT("111111"));
     		bool bIsRetracting = false;
     		if (BoxChain.Num()==1)
     		{
@@ -613,11 +611,11 @@ void AABoxBot::SpawnBox(FVector Direction)
     		if (Direction.Z == 0)return;
     		if (Direction.Z > 0) //向上
     		{
-			    UE_LOG(LogTemp, Log, TEXT("向上"));
-			    UE_LOG(LogTemp, Log, TEXT("%s"),*HitResult.GetActor()->GetName());
+			    //UE_LOG(LogTemp, Log, TEXT("向上"));
+			    //UE_LOG(LogTemp, Log, TEXT("%s"),*HitResult.GetActor()->GetName());
     			if (Cast<AABoxBot>(HitResult.GetActor())||Cast<AABoxBot>(HitResult.GetActor()))
     			{
-				    UE_LOG(LogTemp, Log, TEXT("向上检测到"));
+				    //UE_LOG(LogTemp, Log, TEXT("向上检测到"));
     				TArray<AActor*> OutTeam;
     				TSet<AActor*> Visited;
     				CollectJumpTeam(HitResult.GetActor(),OutTeam,Visited);
@@ -961,7 +959,7 @@ void AABoxBot::RemoveDroppedBoxes()
 void AABoxBot::SwitchToJumpFlipbook()
 {
 	bIsPlayingSquat = false;
-	UE_LOG(LogTemp, Log, TEXT("JSQ01计时器结束：切换为跳跃动画"));
+	//UE_LOG(LogTemp, Log, TEXT("JSQ01计时器结束：切换为跳跃动画"));
 	if (FootFlipbookComponent && JumpPaperFlipbook)
 	{
 		// 施加跳跃力
@@ -984,7 +982,7 @@ void AABoxBot::SwitchToJumpFlipbook()
 void AABoxBot::SwitchToStandFlipbook()
 {
 	bIsPlayingSquat = false;
-	UE_LOG(LogTemp, Log, TEXT("JSQ02计时器触发：切换为站立动画"));
+	//UE_LOG(LogTemp, Log, TEXT("JSQ02计时器触发：切换为站立动画"));
 	if (FootFlipbookComponent && StandPaperFlipbook)
 	{
 		BodySpriteComponent->SetRelativeLocation(FVector(0,0,0));
@@ -1191,12 +1189,9 @@ void AABoxBot::OnSpikeHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 		
 		int32 TileX=FMath::FloorToInt(LocalPos.X/TileWidth);
 		int32 TileY=FMath::RoundToInt(-LocalPos.Z/TileHeight);
-		UE_LOG(LogTemp, Log, TEXT("%d,%d"),TileX,TileY);
+	
 		FPaperTileInfo TileInfo=HitCom->GetTile(TileX,TileY,0);
-		if (TileInfo.TileSet != nullptr && TileInfo.TileSet->GetTileUserData(TileInfo.GetTileIndex()).IsValid())
-		{
-			UE_LOG(LogTemp, Log, TEXT("%s"),*TileInfo.TileSet->GetTileUserData(TileInfo.GetTileIndex()).ToString());
-		}
+
 		if (TileInfo.IsValid()&&TileInfo.TileSet)
 		{
 			if (TileInfo.TileSet->GetTileUserData(TileInfo.GetTileIndex())=="Spike")

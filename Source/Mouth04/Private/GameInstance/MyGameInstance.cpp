@@ -56,7 +56,7 @@ void UMyGameInstance::SetP1AnimalClass(TSubclassOf<AABoxBot> NewAnimalClass)
 
 void UMyGameInstance::SetP2AnimalClass(TSubclassOf<AABoxBot> NewAnimalClass)
 {
-	G_P1SelectedClass = NewAnimalClass;
+	G_P2SelectedClass = NewAnimalClass;
 	if (G_P2SelectedClass)
 	{
 		UE_LOG(LogTemp, Log, TEXT("P2AnimalClass已切换为：%s"), *G_P2SelectedClass->GetName());
