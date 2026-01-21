@@ -29,6 +29,34 @@ enum class EG_Widget : uint8
 	ExitGame//退出游戏界面
 };
 
+UENUM(BlueprintType)
+enum class ELevelMode : uint8//关卡是单人关卡还是双人关卡
+{
+	Solo,
+	Coop 
+};
+
+USTRUCT(BlueprintType)
+struct FLevelConfig : public FTableRowBase//关卡配置
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ELevelMode GameModeType = ELevelMode::Solo;//单人还是双人
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName LevelMapName;//地图文件名
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName NextLevelName;//下一关
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 P1MaxBoxes = 5;//玩家1最大盒子数
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 P2MaxBoxes = 5;//玩家2最大盒子数
+	
+};
 
 
 UCLASS()
@@ -36,7 +64,7 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 	public:
-	
+	UMyGameInstance();
 	// ========== 全局共享变量 ==========	
 	
 	UPROPERTY(BlueprintReadWrite, Category = "双人模式")
@@ -102,5 +130,13 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	UFUNCTION(BlueprintCallable, Category = "GlobalData|BoxNumber")
 	int32 GetP2RemainingBoxNumber() const;
 	
+	
+	
+	//关卡数据表
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LevelConfig")
+	class UDataTable* LevelConfigTable;
 
+	// 辅助函数：查表
+	UFUNCTION(BlueprintCallable, Category = "LevelConfig")
+	FLevelConfig GetLevelConfig(FName RowName);
 };

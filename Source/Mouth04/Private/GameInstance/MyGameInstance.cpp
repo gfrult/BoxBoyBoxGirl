@@ -2,6 +2,8 @@
 
 #include "GameInstance/MyGameInstance.h"
 #include "Math/UnrealMathUtility.h"
+#include "UObject/ConstructorHelpers.h"
+#include "Engine/DataTable.h"
 #include "Players/ABoxBot.h"
 
 
@@ -39,6 +41,27 @@ void UMyGameInstance::SetP2RemainingBoxNumber(int32 NewNumber)
 int32 UMyGameInstance::GetP2RemainingBoxNumber() const
 {
 	return G_P2RemainingBoxNumber;
+}
+
+FLevelConfig UMyGameInstance::GetLevelConfig(FName RowName)
+{
+	if (LevelConfigTable)
+	{
+		static const FString ContextString(TEXT("Level Config Lookup"));
+		FLevelConfig* Row = LevelConfigTable->FindRow<FLevelConfig>(RowName, ContextString);
+		if (Row) return *Row;
+	}
+	return FLevelConfig();
+}
+
+UMyGameInstance::UMyGameInstance()
+{
+	static ConstructorHelpers::FObjectFinder<UDataTable> DT_ConfigObj(TEXT("/Script/Engine.DataTable'/Game/Map/MapData/MapDataTable.MapDataTable'"));
+
+	if (DT_ConfigObj.Object)
+	{
+		LevelConfigTable = DT_ConfigObj.Object;
+	}
 }
 
 void UMyGameInstance::SetP1AnimalClass(TSubclassOf<AABoxBot> NewAnimalClass)
