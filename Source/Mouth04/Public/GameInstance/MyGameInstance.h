@@ -23,6 +23,7 @@ UENUM(BlueprintType)
 enum class EG_Widget : uint8
 {
 	Start,//开始界面+单人模式or双人模式选择
+	ChosePlayer,
 	ChoseSkin,//皮肤选择界面
 	ChoseMap,//关卡选择界面
 	ExitGame//退出游戏界面
