@@ -57,7 +57,23 @@ struct FLevelConfig : public FTableRowBase//关卡配置
 	int32 P2MaxBoxes = 5;//玩家2最大盒子数
 	
 };
+USTRUCT(BlueprintType)
+struct FLevelData//关卡进度信息
+{
+	GENERATED_BODY()
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bUnlocked = false; // 是否解锁
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bCleared = false;  // 是否通关
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bHasStart;    // 获得星星
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 HighScore = 0;    // 最高分
+};
 
 UCLASS()
 class MOUTH04_API UMyGameInstance : public UGameInstance
@@ -139,4 +155,27 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	// 辅助函数：查表
 	UFUNCTION(BlueprintCallable, Category = "LevelConfig")
 	FLevelConfig GetLevelConfig(FName RowName);
+	
+	//从表格读取最大盒子数并设置
+	UFUNCTION(BlueprintCallable, Category = "LevelConfig")
+	void SetMaxBox(FName LevelName);
+	
+	
+	
+	
+	//关卡进度map
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
+	TMap<FName, FLevelData> LevelProgressMap;
+	
+	//更新关卡进度
+	UFUNCTION(BlueprintCallable, Category = "SaveData")
+	void UpdateLevelProgress(FName LevelRowName, bool hasStars, int32 Score);
+
+	//解锁某关 
+	UFUNCTION(BlueprintCallable, Category = "SaveData")
+	void UnlockLevel(FName LevelRowName);
+
+	//查询某关是否解锁 
+	UFUNCTION(BlueprintCallable, Category = "SaveData")
+	bool IsLevelUnlocked(FName LevelRowName);
 };

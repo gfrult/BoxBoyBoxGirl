@@ -32,7 +32,11 @@ void UChoseMapWidget::OnClickedInMap()
 		return; // 获取失败则直接返回，避免空指针
 	}
 	//2.调用函数
-	MyGM->StartGameLevel("M_Box");//注意这里默认调用的是map1
+	//MyGM->StartGameLevel("M_Box");//注意这里默认调用的是map1
+	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
+	GI->SetMaxBox("Coop_01");//设置最大盒子数
+	MyGM->StartGameLevel("Coop_01");
+	
 }
 
 void UChoseMapWidget::OnClickedChosePlayer()

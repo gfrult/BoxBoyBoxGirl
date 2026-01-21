@@ -54,6 +54,90 @@ FLevelConfig UMyGameInstance::GetLevelConfig(FName RowName)
 	return FLevelConfig();
 }
 
+void UMyGameInstance::SetMaxBox(FName LevelName)
+{
+	FLevelConfig Config = GetLevelConfig(LevelName);
+	G_P1MaxBoxNumber = Config.P1MaxBoxes;
+	G_P2MaxBoxNumber = Config.P2MaxBoxes;
+}
+
+void UMyGameInstance::UpdateLevelProgress(FName LevelRowName, bool hasStars, int32 Score)
+{
+	// 查找记录
+	FLevelData* Data = LevelProgressMap.Find(LevelRowName);
+
+	if (Data)
+	{
+		// 标记通关
+		Data->bCleared = true; 
+		Data->bUnlocked = true;
+
+		// 更新星星 
+		if (hasStars)
+		{
+			Data->bHasStart = true;
+		}
+
+		// 更新最高分
+		Data->HighScore = FMath::Max(Data->HighScore, Score);
+		
+
+	}
+	else
+	{
+		//如果是第一次玩
+		FLevelData NewData;
+		NewData.bUnlocked = true;
+		NewData.bCleared = true;
+		NewData.bHasStart = hasStars; 
+		NewData.HighScore = Score;
+
+		LevelProgressMap.Add(LevelRowName, NewData);//存入Map
+		
+	}
+	FLevelConfig CurrentConfig = GetLevelConfig(LevelRowName);
+	
+	if (!CurrentConfig.NextLevelName.IsNone())
+	{
+		UnlockLevel(CurrentConfig.NextLevelName);
+	}
+	
+}
+
+void UMyGameInstance::UnlockLevel(FName LevelRowName)
+{
+	if (LevelRowName.IsNone())return;
+	FLevelData* Data = LevelProgressMap.Find(LevelRowName);
+	if (Data)
+	{
+		Data->bUnlocked = true;
+	}
+	else
+	{
+		FLevelData NewData;
+		NewData.bUnlocked = true;
+		LevelProgressMap.Add(LevelRowName, NewData);
+	}
+}
+
+bool UMyGameInstance::IsLevelUnlocked(FName LevelRowName)
+{
+	//第一关永远解锁
+	if (LevelRowName == "Solo_01" || LevelRowName == "Coop_01")
+	{
+		return true;
+	}
+
+	FLevelData* Data = LevelProgressMap.Find(LevelRowName);
+	if (Data)
+	{
+		return Data->bUnlocked;
+	}
+	
+	// 如果字典里没找到，说明是锁着的
+	return false;
+}
+
 UMyGameInstance::UMyGameInstance()
 {
 	static ConstructorHelpers::FObjectFinder<UDataTable> DT_ConfigObj(TEXT("/Script/Engine.DataTable'/Game/Map/MapData/MapDataTable.MapDataTable'"));
