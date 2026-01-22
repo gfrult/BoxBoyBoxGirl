@@ -69,6 +69,12 @@ public:
 	
 	class UPaperFlipbook* SquatPaperFlipbook;//下蹲
 	
+	class UPaperSprite* UpArrow;
+	
+	class UPaperSpriteComponent* UpArrowCom;
+	
+	class AGoalActor* GoalDoor=nullptr;
+	
 	void RightFunction(float AxisValue);
 	void JumpFunction();
 	void BeginSpawnBox();
@@ -114,6 +120,7 @@ public:
 	float BoxYVector;//第一个方块相对玩家的位置
 	int8 MyID;
 	FVector RespawnLocation;
+	int32 PlayerStarNum=0;
 	
 private:
 	UPROPERTY()

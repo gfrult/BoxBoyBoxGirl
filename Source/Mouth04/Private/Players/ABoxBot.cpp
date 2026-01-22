@@ -18,6 +18,7 @@
 #include "PaperTileMap.h"
 #include "GameInstance/MyGameInstance.h"
 #include "Kismet/GameplayStatics.h"
+#include "Actors/GoalActor.h"
 
 // Sets default values
 AABoxBot::AABoxBot()
@@ -35,6 +36,8 @@ AABoxBot::AABoxBot()
 	EyesFlipbookComponent=CreateDefaultSubobject<UPaperFlipbookComponent>(TEXT("EyesFlipbookComponent"));
 	Wheel1=CreateDefaultSubobject<USphereComponent>(TEXT("Wheel1"));
 	Wheel2=CreateDefaultSubobject<USphereComponent>(TEXT("Wheel2"));
+	UpArrowCom=CreateDefaultSubobject<UPaperSpriteComponent>("UpArrowCom");
+	
 	
 	//设置组件所在位置,身体和表情的序列素材组件在BoxBody身体碰撞盒子上,脚的序列动画组件在BoxFoot脚的球形碰撞体上
 	SpringArm->SetupAttachment(RootComponent);
@@ -46,6 +49,7 @@ AABoxBot::AABoxBot()
 	EyesFlipbookComponent->SetupAttachment(BoxBody);
 	Wheel1->SetupAttachment(BoxBody);
 	Wheel2->SetupAttachment(BoxBody);
+	UpArrowCom->SetupAttachment(BoxBody);
 	
 	//设置物理材质的初始化属性
 	BotPhysMat->Restitution = 0.0f;  //弹性
@@ -127,6 +131,11 @@ AABoxBot::AABoxBot()
 	{
 		SquatPaperFlipbook=SquatPF.Object;
 	}
+	static ConstructorHelpers::FObjectFinder<UPaperSprite>UpArrowPS(TEXT("/Script/Paper2D.PaperSprite'/Game/MyBoxGame/Textures/UpArrow/Up_Sprite.Up_Sprite'"));
+	if (UpArrowPS.Object)
+	{
+		UpArrow=UpArrowPS.Object;
+	}
 	
 	
 	BodySpriteComponent->SetSprite(BodySprite);
@@ -137,11 +146,14 @@ AABoxBot::AABoxBot()
 	FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
 	FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
 	
+	UpArrowCom->SetRelativeLocation(FVector(0,5,48));
+	
 	bIsSpawnMode=false;
 	bClockSpawnLeft=false;
 	bClockSpawnRight=false;
 	bIsInAir=false;
 	bIsPutDown=false;
+	PlayerStarNum=0;
 
 	PrimaryActorTick.bCanEverTick = true;	// 开启Tick（必须，否则颤动逻辑不执行）
 	bIsThrowing=false;
@@ -159,6 +171,9 @@ void AABoxBot::BeginPlay()
 	FootFlipbookComponent->SetFlipbook(StandPaperFlipbook);
 	FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
 	RespawnLocation=GetActorLocation();
+	
+	UpArrowCom->SetSprite(UpArrow);
+	UpArrowCom->SetVisibility(false);
 	
 	BoxFoot->OnComponentHit.AddDynamic(this,&AABoxBot::OnSpikeHit);
 	//BoxBody->OnComponentHit.AddDynamic(this,&AABoxBot::OnSpikeHit);
@@ -805,6 +820,14 @@ void AABoxBot::SpawnBox(FVector Direction)
 
 void AABoxBot::OnSpawnUp()
 {
+	if (!bIsSpawnMode )
+	{
+		if (GoalDoor)
+		{
+			GoalDoor->TryToFinishLevel();
+			return;
+		}
+	}
 	SpawnBox(FVector(0, 0, 1));
 }
 

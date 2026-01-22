@@ -61,7 +61,7 @@ void UMyGameInstance::SetMaxBox(FName LevelName)
 	G_P2MaxBoxNumber = Config.P2MaxBoxes;
 }
 
-void UMyGameInstance::UpdateLevelProgress(FName LevelRowName, bool hasStars, int32 Score)
+void UMyGameInstance::UpdateLevelProgress(FName LevelRowName, int32 StarsNum)
 {
 	// 查找记录
 	FLevelData* Data = LevelProgressMap.Find(LevelRowName);
@@ -73,15 +73,9 @@ void UMyGameInstance::UpdateLevelProgress(FName LevelRowName, bool hasStars, int
 		Data->bUnlocked = true;
 
 		// 更新星星 
-		if (hasStars)
-		{
-			Data->bHasStart = true;
-		}
-
-		// 更新最高分
-		Data->HighScore = FMath::Max(Data->HighScore, Score);
 		
-
+		Data->StarNum = FMath::Max(Data->StarNum, StarsNum);
+		
 	}
 	else
 	{
@@ -89,8 +83,7 @@ void UMyGameInstance::UpdateLevelProgress(FName LevelRowName, bool hasStars, int
 		FLevelData NewData;
 		NewData.bUnlocked = true;
 		NewData.bCleared = true;
-		NewData.bHasStart = hasStars; 
-		NewData.HighScore = Score;
+		NewData.StarNum = StarsNum; 
 
 		LevelProgressMap.Add(LevelRowName, NewData);//存入Map
 		
@@ -136,6 +129,16 @@ bool UMyGameInstance::IsLevelUnlocked(FName LevelRowName)
 	
 	// 如果字典里没找到，说明是锁着的
 	return false;
+}
+
+int32 UMyGameInstance::GetStarNum(FName LevelRowName)
+{
+	FLevelData* Data = LevelProgressMap.Find(LevelRowName);
+	if (Data)
+	{
+		return Data->StarNum;
+	}
+	return 0;
 }
 
 UMyGameInstance::UMyGameInstance()

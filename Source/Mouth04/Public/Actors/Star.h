@@ -4,16 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "GoalActor.generated.h"
+#include "Star.generated.h"
 
 UCLASS()
-class MOUTH04_API AGoalActor : public AActor
+class MOUTH04_API AStar : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this actor's properties
-	AGoalActor();
+	AStar();
 
 protected:
 	// Called when the game starts or when spawned
@@ -22,19 +22,11 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	class UPaperFlipbookComponent* GoalDoorPaperFlipbookComponent;
-	class UPaperFlipbook* GoalDoorPaperFlipbook;
-	class UBoxComponent* GoalDoorBox;
+	class UPaperSpriteComponent* StarSpriteCom;
+	class USphereComponent* StarBox;
+	
 	
 	UFUNCTION()
 	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-	void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	
-	UPROPERTY()
-	TArray<class AABoxBot*> OverlappingPlayers;
-	
-	int32 TotalPlayersNeeded = 1;
-	
-	void TryToFinishLevel();
+
 };

@@ -39,12 +39,10 @@ void ACheckpoint::Tick(float DeltaTime)
 void ACheckpoint::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor)UE_LOG(LogTemp, Log, TEXT("碰撞"));
 	AABoxBot* Bot = Cast<AABoxBot>(OtherActor);
 	if (Bot)
 	{
 		Bot->RespawnLocation = GetActorLocation();
-		UE_LOG(LogTemp, Log, TEXT("存档"));
 	}
 }
 

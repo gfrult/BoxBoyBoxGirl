@@ -92,7 +92,7 @@ void AHomeGameModeBase::BeginPlay()
     }
 	
     // 4. 设置共享相机
-    ASharedCamera* MyCamera = GetWorld()->SpawnActor<ASharedCamera>(ASharedCamera::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator);
+    ASharedCamera* MyCamera = GetWorld()->SpawnActor<ASharedCamera>(ASharedCamera::StaticClass(), P1_Loc, FRotator::ZeroRotator);
 
     if (MyCamera)
     {

@@ -69,10 +69,8 @@ struct FLevelData//关卡进度信息
 	bool bCleared = false;  // 是否通关
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bHasStart;    // 获得星星
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 HighScore = 0;    // 最高分
+	int32 StarNum=0;    // 获得星星
+	
 };
 
 UCLASS()
@@ -169,7 +167,7 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	
 	//更新关卡进度
 	UFUNCTION(BlueprintCallable, Category = "SaveData")
-	void UpdateLevelProgress(FName LevelRowName, bool hasStars, int32 Score);
+	void UpdateLevelProgress(FName LevelRowName, int32 StarsNum);
 
 	//解锁某关 
 	UFUNCTION(BlueprintCallable, Category = "SaveData")
@@ -178,4 +176,8 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	//查询某关是否解锁 
 	UFUNCTION(BlueprintCallable, Category = "SaveData")
 	bool IsLevelUnlocked(FName LevelRowName);
+	
+	//获取关卡星星数
+	UFUNCTION(BlueprintCallable, Category = "SaveData")
+	int32 GetStarNum(FName LevelRowName);
 };
