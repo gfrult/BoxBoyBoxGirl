@@ -102,6 +102,7 @@ public:
 	void Respawn();
 	UFUNCTION()
 	void  OnSpikeHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	int32 HookBoxIndex();
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
