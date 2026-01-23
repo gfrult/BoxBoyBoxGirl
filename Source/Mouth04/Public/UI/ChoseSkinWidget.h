@@ -10,6 +10,8 @@
  * 
  */
 
+
+class UImage;
 class UChoseMapWidget;
 class USelsectPlayerWidget;
 class UButton;
@@ -31,6 +33,8 @@ public:
 	TObjectPtr<UButton> Button_Up;
 	
 	UMyGameInstance* GameInstance;
+	
+
 	
 	UFUNCTION()
 	void OnClickedNext();
