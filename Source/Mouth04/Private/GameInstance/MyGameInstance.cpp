@@ -70,7 +70,7 @@ void UMyGameInstance::UpdateLevelProgress(FName LevelRowName, int32 StarsNum)
 	{
 		// 标记通关
 		Data->bCleared = true; 
-		Data->bUnlocked = true;
+		Data->UnlockStatus = ELevelStatus::Unlocked;
 
 		// 更新星星 
 		
@@ -81,7 +81,7 @@ void UMyGameInstance::UpdateLevelProgress(FName LevelRowName, int32 StarsNum)
 	{
 		//如果是第一次玩
 		FLevelData NewData;
-		NewData.bUnlocked = true;
+		NewData.UnlockStatus = ELevelStatus::Unlocked;
 		NewData.bCleared = true;
 		NewData.StarNum = StarsNum; 
 
@@ -103,32 +103,32 @@ void UMyGameInstance::UnlockLevel(FName LevelRowName)
 	FLevelData* Data = LevelProgressMap.Find(LevelRowName);
 	if (Data)
 	{
-		Data->bUnlocked = true;
+		if (Data->UnlockStatus == ELevelStatus::Locked)
+		{
+			Data->UnlockStatus = ELevelStatus::FirstUnlocked;
+		}
 	}
 	else
 	{
 		FLevelData NewData;
-		NewData.bUnlocked = true;
+		NewData.UnlockStatus = ELevelStatus::FirstUnlocked;
 		LevelProgressMap.Add(LevelRowName, NewData);
 	}
 }
 
-bool UMyGameInstance::IsLevelUnlocked(FName LevelRowName)
+ELevelStatus UMyGameInstance::GetLevelStatus(FName LevelRowName)
 {
-	//第一关永远解锁
 	if (LevelRowName == "Solo_01" || LevelRowName == "Coop_01")
 	{
-		return true;
+		return ELevelStatus::Unlocked;
 	}
-
 	FLevelData* Data = LevelProgressMap.Find(LevelRowName);
+	
 	if (Data)
 	{
-		return Data->bUnlocked;
+		return Data->UnlockStatus;
 	}
-	
-	// 如果字典里没找到，说明是锁着的
-	return false;
+	return ELevelStatus::Locked;
 }
 
 int32 UMyGameInstance::GetStarNum(FName LevelRowName)
@@ -139,6 +139,15 @@ int32 UMyGameInstance::GetStarNum(FName LevelRowName)
 		return Data->StarNum;
 	}
 	return 0;
+}
+
+void UMyGameInstance::MarkLevelAsSeen(FName LevelRowName)
+{
+	FLevelData* Data = LevelProgressMap.Find(LevelRowName);
+	if (Data)
+	{
+		Data->UnlockStatus = ELevelStatus::Unlocked;
+	}
 }
 
 UMyGameInstance::UMyGameInstance()

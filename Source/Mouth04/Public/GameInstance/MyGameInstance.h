@@ -57,13 +57,22 @@ struct FLevelConfig : public FTableRowBase//关卡配置
 	int32 P2MaxBoxes = 5;//玩家2最大盒子数
 	
 };
+
+UENUM()
+enum class ELevelStatus : uint8
+{
+	Locked=0,    //未解锁      
+	FirstUnlocked=1,    //首次解锁
+	Unlocked=2    //解锁
+};
+
 USTRUCT(BlueprintType)
 struct FLevelData//关卡进度信息
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bUnlocked = false; // 是否解锁
+	ELevelStatus UnlockStatus = ELevelStatus::Locked; // 是否解锁
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bCleared = false;  // 是否通关
@@ -175,9 +184,12 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 
 	//查询某关是否解锁 
 	UFUNCTION(BlueprintCallable, Category = "SaveData")
-	bool IsLevelUnlocked(FName LevelRowName);
+	ELevelStatus GetLevelStatus(FName LevelRowName);
 	
 	//获取关卡星星数
 	UFUNCTION(BlueprintCallable, Category = "SaveData")
 	int32 GetStarNum(FName LevelRowName);
+	
+	UFUNCTION(BlueprintCallable, Category = "SaveData")
+	void MarkLevelAsSeen (FName LevelRowName);
 };
