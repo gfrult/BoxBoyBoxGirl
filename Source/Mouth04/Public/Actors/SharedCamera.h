@@ -28,7 +28,7 @@ public:
 	class USceneComponent* RootScene;
 	
 	float MinArmLength = 4500.0f;
-	float MaxArmLength = 8000.0f;
-	float ZoomMultiplier = 1.5f;
+	float MaxArmLength = 9000.0f;
+	float ZoomMultiplier = 2.2f;
 	float ZoomInterpSpeed = 2.0f;
 };

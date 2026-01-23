@@ -25,8 +25,8 @@ ADoor::ADoor()
 	SafetyBox->SetupAttachment(DoorSpriteComponent);
 	
 	DoorComponent->SetBoxExtent(FVector(32.f, 32.f, 160.f));
-	SafetyBox->SetBoxExtent(FVector(31.f, 31.f, 165.f));
-	
+	SafetyBox->SetBoxExtent(FVector(31.f, 31.f, 160.f));
+	SafetyBox->SetRelativeLocation(FVector(0.0f, 0.0f, -5.0f));
 	
 	DoorComponent->SetCollisionProfileName("BlockAll");
 	SafetyBox->SetCollisionProfileName("Trigger");
