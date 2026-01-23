@@ -24,6 +24,7 @@ void ULockWidget::Unlock()
 	if (Anim_UnLock)
 	{
 		PlayAnimation(Anim_UnLock);
+		UE_LOG(LogTemp, Log, TEXT("锁UI:播放解锁动画"));
 	}
 }
 
@@ -36,5 +37,6 @@ void ULockWidget::LockShake()
 	if (Anim_LockShake)
 	{
 		PlayAnimation(Anim_LockShake);
+
 	}
 }

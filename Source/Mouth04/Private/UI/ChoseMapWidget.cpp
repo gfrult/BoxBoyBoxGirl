@@ -113,7 +113,7 @@ void UChoseMapWidget::InitializeMapLockP2(int32 MapIndex)
 	{
 		U_MapLock->SetVisibility(ESlateVisibility::Visible);
 		Image_TowGray->SetVisibility(ESlateVisibility::Visible);
-		U_MapLock->Anim_UnLock;//播放解锁动画
+		U_MapLock->Unlock();//播放解锁动画
 		PlayAnimation(Anim_UnlockMap);
 		GI->MarkLevelAsSeen(MapName);//将状态标记为已解锁
 		UE_LOG(LogTemp,Log, TEXT("UI初始化:%s :FirstUnlocked，初次解锁"),*MapName.ToString());
