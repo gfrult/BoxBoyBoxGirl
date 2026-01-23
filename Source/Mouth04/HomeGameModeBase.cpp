@@ -74,7 +74,10 @@ void AHomeGameModeBase::BeginPlay()
     if (bIsTwoPlayer) 
     {
         // 只有双人模式才创建第2个控制器
-        UGameplayStatics::CreatePlayer(this, 1, true);
+    	if (!UGameplayStatics::GetPlayerController(this, 1))
+    	{
+    		UGameplayStatics::CreatePlayer(this, 1, true);
+    	}
     	
         if (ClassP2)
         {

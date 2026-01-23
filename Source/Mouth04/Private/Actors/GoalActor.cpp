@@ -121,10 +121,18 @@ void AGoalActor::TryToFinishLevel()
 				}
 			}
 			UE_LOG(LogTemp, Log, TEXT("%d"), TotalStarsInLevel);
+			APlayerController* PC2 = UGameplayStatics::GetPlayerController(GetWorld(), 1);
+    
+			if (PC2)
+			{
+				UGameplayStatics::RemovePlayer(PC2, true);
+			}
+			
+			UGameplayStatics::OpenLevel(this, "M_Menu");
 			FName LevelName=FName(*GetWorld()->GetName());
 			GI->UpdateLevelProgress(LevelName,TotalStarsInLevel);
 			GI->G_WidgetChose = EG_Widget::ChoseMap;
-			UGameplayStatics::OpenLevel(this,FName("this"));
+			UGameplayStatics::OpenLevel(this,FName("M_Menu"));
 		}
 	}
 }

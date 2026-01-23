@@ -878,7 +878,7 @@ bool AABoxBot::CheckIsHooked()
 {
 	if (BoxChain.Num()==0)return false;
 	HookBoxIndex();
-	UE_LOG(LogTemp, Log, TEXT("CheckIsHooked()"));
+	
 	FHitResult HitResult;
 	FCollisionQueryParams CollisionParameters;
 	CollisionParameters.AddIgnoredActor(this);
@@ -889,7 +889,11 @@ bool AABoxBot::CheckIsHooked()
 		FVector Start = Box->GetActorLocation();
 		FVector End = Start + FVector(0.0f, 0.0f, -35.0f);
 		bool IsHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility,CollisionParameters);
-		if (IsHit)return true;
+		if (IsHit)
+		{
+			UE_LOG(LogTemp, Log, TEXT("CheckIsHooked()"));
+			return true;
+		}
 	}
 
 	return false;
@@ -1228,40 +1232,32 @@ void AABoxBot::OnSpikeHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 
 int32 AABoxBot::HookBoxIndex()
 {
-	
-	if (BoxChain.Num()==0)return -1;
-	
-	if (BoxChain.Num() > 0)
+	if (BoxChain.Num() == 0) return -1;
+
+	FHitResult HitResult;
+	FCollisionQueryParams CollisionParameters;
+	CollisionParameters.AddIgnoredActor(this);
+	CollisionParameters.AddIgnoredActors(BoxChain);
+
+	//从最后一个箱子往前倒着查 
+	for (int32 i = BoxChain.Num() - 1; i >= 0; i--)
 	{
-		FHitResult HitResult;
-		FCollisionQueryParams CollisionParameters;
-		CollisionParameters.AddIgnoredActor(this);
-		CollisionParameters.AddIgnoredActors(BoxChain);
-		int32 MaxIndex=0;
-		bool HasHit = false;
-		for (int32 i = 0; i < BoxChain.Num()-1; i++)
+		AActor* Box = BoxChain[i];
+		if (!IsValid(Box)) continue;
+
+		FVector Start = Box->GetActorLocation();
+		FVector End = Start + FVector(0.0f, 0.0f, -35.0f);
+        
+		// 找到最远的一个钩住的
+		bool IsHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, CollisionParameters);
+
+		if (IsHit)
 		{
-			
-			AActor* Box=BoxChain[i];
-			if (!IsValid(Box)) continue;
-			FVector Start = Box->GetActorLocation();
-			FVector End = Start + FVector(0.0f, 0.0f, -35.0f);
-			bool IsHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility,CollisionParameters);
-			UE_LOG(LogTemp, Log, TEXT("HookBoxIndex()"));
-			if (IsHit)
-			{
-				
-				MaxIndex=i;
-				HasHit=true;
-				
-			}
-		}
-		if (HasHit)
-		{
-			UE_LOG(LogTemp, Log, TEXT("%d"),MaxIndex);
-			return MaxIndex;
+			UE_LOG(LogTemp, Log, TEXT("HookBoxIndex Found: %d"), i);
+			return i; 
 		}
 	}
+
 	return -1;
 }
 
