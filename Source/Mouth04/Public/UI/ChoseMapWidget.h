@@ -10,6 +10,7 @@
  * 
  */
 
+class UStarWidget;
 class UWidgetSwitcher;
 class UImage;
 class ULockWidget;
@@ -38,7 +39,11 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> Button_Solo1;
 	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> Button_Solo11;
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> Button_Solo2;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> Button_Solo21;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> Button_Solo3;
 	
@@ -71,6 +76,33 @@ public:
 	ULockWidget* U_MapLock5;
 	UPROPERTY(meta = (BindWidget))
 	ULockWidget* U_MapLock6;
+	UPROPERTY(meta = (BindWidget))
+	ULockWidget* U_MapLock_O1;
+	UPROPERTY(meta = (BindWidget))
+	ULockWidget* U_MapLock_O2;
+	UPROPERTY(meta = (BindWidget))
+	ULockWidget* U_MapLock_O3;
+	
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_1;
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_2;
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_3;
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_4;
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_5;
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_6;
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_O1;
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_O2;
+	UPROPERTY(meta = (BindWidget))
+	UStarWidget* U_Star_O3;
+	
+	
 	
 	UPROPERTY(meta=(BindWidgetAnim),Transient)
 	TObjectPtr<UWidgetAnimation> Anim_UnlockMap1;	
@@ -84,6 +116,12 @@ public:
 	TObjectPtr<UWidgetAnimation> Anim_UnlockMap5;	
 	UPROPERTY(meta=(BindWidgetAnim),Transient)
 	TObjectPtr<UWidgetAnimation> Anim_UnlockMap6;	
+	UPROPERTY(meta=(BindWidgetAnim),Transient)
+	TObjectPtr<UWidgetAnimation> Anim_UnlockSolo1;
+	UPROPERTY(meta=(BindWidgetAnim),Transient)
+	TObjectPtr<UWidgetAnimation> Anim_UnlockSolo2;
+	UPROPERTY(meta=(BindWidgetAnim),Transient)
+	TObjectPtr<UWidgetAnimation> Anim_UnlockSolo3;
 	
 	UPROPERTY(meta=(BindWidgetAnim),Transient)
 	TObjectPtr<UWidgetAnimation> Anim_ChoseShare;
@@ -105,6 +143,13 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Image_TwoM6;
 	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_OneM1;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_OneM2;	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_OneM3;
+	
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Image_TowGray1;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Image_TowGray2;
@@ -116,6 +161,14 @@ public:
 	TObjectPtr<UImage> Image_TowGray5;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Image_TowGray6;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_OneGray1;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_OneGray2;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> Image_OneGray3;
+	
+	
 	
 	UPROPERTY()
 	USelsectPlayerWidget* ChosePlayersWidget = nullptr;
@@ -157,7 +210,7 @@ public:
 	
 	
 	UFUNCTION()
-	void InitializeMapLockP2(int32 MapIndex);
+	void InitializeMapLock(int32 MapIndex);
 	
 	UFUNCTION()
 	void ShakeLockedMap(int32 MapIndex);

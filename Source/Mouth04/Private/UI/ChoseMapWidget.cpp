@@ -4,6 +4,7 @@
 #include "ChoseMapWidget.h"
 #include "Misc/Paths.h"
 #include "LockWidget.h"
+#include "StarWidget.h"
 #include "SelsectPlayerWidget.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
@@ -26,7 +27,7 @@ void UChoseMapWidget::NativeConstruct()
     		ModeStr="Coop_";
 		    for (int32 i = 1; i <= 6; ++i)
 		    {
-		    	InitializeMapLockP2(i);//初始化关卡的锁定状态
+		    	InitializeMapLock(i);//初始化关卡的锁定状态
 		    }
     		ChoseMapAnim(0);//默认没有选择关卡
     	}
@@ -34,6 +35,10 @@ void UChoseMapWidget::NativeConstruct()
     	{
     		ModeStr="Solo_";
     		WidgetSwitcher_PlayerN->SetActiveWidgetIndex(0);
+    		InitializeMapLock(1);
+    		InitializeMapLock(2);
+    		InitializeMapLock(3);
+    		ChoseMapAnim(0);//默认没有选择关卡
     	}
 	}
 	Button_Map1->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedTowMap1);
@@ -45,8 +50,11 @@ void UChoseMapWidget::NativeConstruct()
 	Button_Map5->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedTowMap5);
 	Button_Map6->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedTowMap6);
 	Button_Solo1->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedOneSolo1);
+	Button_Solo11->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedOneSolo1);
 	Button_Solo2->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedOneSolo2);
+	Button_Solo21->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedOneSolo2);
 	Button_Solo3->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedOneSolo3);
+	
 	if (Button_InMap)
 	{
 		Button_InMap->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedInMap);
@@ -60,53 +68,92 @@ void UChoseMapWidget::NativeConstruct()
 	
 }
 
-//初始化双人关卡的解锁状态
-void UChoseMapWidget::InitializeMapLockP2(int32 MapIndex)
+//初始化关卡的解锁状态
+void UChoseMapWidget::InitializeMapLock(int32 MapIndex)
 {
 	CombineMapName(MapIndex);//更新FName MapName
 	ULockWidget* U_MapLock =nullptr;
+	UStarWidget* U_Star =nullptr;
 	TObjectPtr<UImage> Image_TowGray=nullptr;
 	TObjectPtr<UWidgetAnimation> Anim_UnlockMap=nullptr;
+	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
 	switch (MapIndex)
 	{
 		case 1:
-			U_MapLock =U_MapLock1;
-			Anim_UnlockMap=Anim_UnlockMap1;
-			Image_TowGray=Image_TowGray1;
+			if (GI->bIsTwoPlayerMode)
+			{
+				U_MapLock =U_MapLock1;
+	            Anim_UnlockMap=Anim_UnlockMap1;
+	            Image_TowGray=Image_TowGray1;
+	            U_Star=U_Star_1;
+			}
+			else
+			{
+				U_MapLock =U_MapLock_O1;
+				Anim_UnlockMap=Anim_UnlockSolo1;
+				Image_TowGray=Image_OneGray1;
+				U_Star=U_Star_O1;
+			}
 			break;
 		case 2:
-			U_MapLock =U_MapLock2;
-			Anim_UnlockMap=Anim_UnlockMap2;
-			Image_TowGray=Image_TowGray2;
+			if (GI->bIsTwoPlayerMode)
+			{
+				U_MapLock =U_MapLock2;
+				Anim_UnlockMap=Anim_UnlockMap2;
+				Image_TowGray=Image_TowGray2;
+				U_Star=U_Star_2;			
+			}
+			else
+			{
+				U_MapLock =U_MapLock_O2;
+				Anim_UnlockMap=Anim_UnlockSolo2;
+				Image_TowGray=Image_OneGray2;
+				U_Star=U_Star_O2;
+			}
 			break;	
 		case 3:
-			U_MapLock =U_MapLock3;
-			Anim_UnlockMap=Anim_UnlockMap3;
-			Image_TowGray=Image_TowGray3;
+			if (GI->bIsTwoPlayerMode)
+			{
+				U_MapLock =U_MapLock3;
+    			Anim_UnlockMap=Anim_UnlockMap3;
+    			Image_TowGray=Image_TowGray3;
+    			U_Star=U_Star_3;			
+			}
+			else
+			{
+				U_MapLock =U_MapLock_O3;
+				Anim_UnlockMap=Anim_UnlockSolo3;
+				Image_TowGray=Image_OneGray3;
+				U_Star=U_Star_O3;
+			}
 			break;	
 		case 4:
 			U_MapLock =U_MapLock4;
 			Anim_UnlockMap=Anim_UnlockMap4;
 			Image_TowGray=Image_TowGray4;
+			U_Star=U_Star_4;
 			break;	
 		case 5:
 			U_MapLock =U_MapLock5;
 			Anim_UnlockMap=Anim_UnlockMap5;
 			Image_TowGray=Image_TowGray5;
+			U_Star=U_Star_5;
 			break;	
 		case 6:
 			U_MapLock =U_MapLock6;
 			Anim_UnlockMap=Anim_UnlockMap6;
 			Image_TowGray=Image_TowGray6;
+			U_Star=U_Star_6;
 			break;	
 		default:
 			break;
 	}
-	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
+
 	if (GI->GetLevelStatus(MapName)==ELevelStatus::Unlocked)//解锁
 	{
 		U_MapLock->SetVisibility(ESlateVisibility::Hidden);//隐藏锁
 		Image_TowGray->SetVisibility(ESlateVisibility::Hidden);//隐藏灰色
+		U_Star->SetStarNumber(GI->GetStarNum(MapName));
 		UE_LOG(LogTemp,Log, TEXT("UI初始化:%s :Unlocked，已解锁"),*MapName.ToString());
 	}
 	else if (GI->GetLevelStatus(MapName)==ELevelStatus::FirstUnlocked)
@@ -116,12 +163,14 @@ void UChoseMapWidget::InitializeMapLockP2(int32 MapIndex)
 		U_MapLock->Unlock();//播放解锁动画
 		PlayAnimation(Anim_UnlockMap);
 		GI->MarkLevelAsSeen(MapName);//将状态标记为已解锁
+		U_Star->SetStarNumber(0);
 		UE_LOG(LogTemp,Log, TEXT("UI初始化:%s :FirstUnlocked，初次解锁"),*MapName.ToString());
 	}
 	else if (GI->GetLevelStatus(MapName)==ELevelStatus::Locked)//锁定
 	{
 		U_MapLock->SetVisibility(ESlateVisibility::Visible);//显示锁
 		Image_TowGray->SetVisibility(ESlateVisibility::Visible);
+		U_Star->SetStarNumber(0);
 		UE_LOG(LogTemp,Log, TEXT("UI初始化:%s :Locked，锁定"),*MapName.ToString());
 	}
 	else
@@ -299,17 +348,17 @@ void UChoseMapWidget::CombineMapName(int32 MapIndex)
 void UChoseMapWidget::ShakeLockedMap(int32 MapIndex)
 {
 	ULockWidget* TargetLockWidget = nullptr;
-
+	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
 	switch (MapIndex)
 	{
 	case 1:
-		TargetLockWidget = U_MapLock1;
+		TargetLockWidget = (GI->bIsTwoPlayerMode)? U_MapLock1:U_MapLock_O1;
 		break;
 	case 2:
-		TargetLockWidget = U_MapLock2;
+		TargetLockWidget = (GI->bIsTwoPlayerMode)? U_MapLock2:U_MapLock_O2;
 		break;
 	case 3:
-		TargetLockWidget = U_MapLock3;
+		TargetLockWidget = (GI->bIsTwoPlayerMode)? U_MapLock3:U_MapLock_O3;
 		break;
 	case 4:
 		TargetLockWidget = U_MapLock4;
@@ -346,16 +395,23 @@ void UChoseMapWidget::ChoseMapAnim(int32 MapIndex)
     Image_TwoM4->SetVisibility(ESlateVisibility::Hidden);
     Image_TwoM5->SetVisibility(ESlateVisibility::Hidden);
     Image_TwoM6->SetVisibility(ESlateVisibility::Hidden);
+	Image_OneM1->SetVisibility(ESlateVisibility::Hidden);
+	Image_OneM2->SetVisibility(ESlateVisibility::Hidden);
+	Image_OneM3->SetVisibility(ESlateVisibility::Hidden);
+	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
     switch (MapIndex)
     {
         case 1:
-        Image_TwoM1->SetVisibility(ESlateVisibility::Visible);
+        if (GI->bIsTwoPlayerMode) Image_TwoM1->SetVisibility(ESlateVisibility::Visible);
+    	else Image_OneM1->SetVisibility(ESlateVisibility::Visible);
         break;
         case 2:
-        Image_TwoM2->SetVisibility(ESlateVisibility::Visible);
+        if (GI->bIsTwoPlayerMode) Image_TwoM2->SetVisibility(ESlateVisibility::Visible);
+    	else Image_OneM2->SetVisibility(ESlateVisibility::Visible);
         break;
         case 3:
-        Image_TwoM3->SetVisibility(ESlateVisibility::Visible);
+        if (GI->bIsTwoPlayerMode) Image_TwoM3->SetVisibility(ESlateVisibility::Visible);
+    	else Image_OneM3->SetVisibility(ESlateVisibility::Visible);
         break;		
         case 4:
         Image_TwoM4->SetVisibility(ESlateVisibility::Visible);
@@ -367,7 +423,7 @@ void UChoseMapWidget::ChoseMapAnim(int32 MapIndex)
         Image_TwoM6->SetVisibility(ESlateVisibility::Visible);
         break;
         default:
-        UE_LOG(LogTemp, Log, TEXT("UMG:map选择界面:超过范围或初始化选择状态"));
+        //UE_LOG(LogTemp, Log, TEXT("UMG:map选择界面:超过范围或初始化选择状态"));
         break;
     }
 	PlayAnimation(Anim_ChoseShare);
