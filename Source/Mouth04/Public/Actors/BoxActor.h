@@ -26,5 +26,5 @@ public:
 	class UPaperSpriteComponent* SpriteComponent;
 	class UBoxComponent* Box;
 	class UPhysicalMaterial* BotPhysMat;
-	class USphereComponent* Wheel;//略微垫高保持平稳
+	class UCapsuleComponent* Wheel;//略微垫高保持平稳
 };

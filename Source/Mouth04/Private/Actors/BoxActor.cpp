@@ -5,9 +5,10 @@
 
 #include "Components/BoxComponent.h"
 #include "PaperSpriteComponent.h"
-#include "PaperSprite.h"
+
+#include "Components/CapsuleComponent.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
-#include "Components/SphereComponent.h"
+
 
 
 // Sets default values
@@ -19,7 +20,7 @@ ABoxActor::ABoxActor()
 	RootComponent=Box;
 	SpriteComponent=CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("SpriteComponent"));
 	BotPhysMat = CreateDefaultSubobject<UPhysicalMaterial>(TEXT("BotPhysMat"));
-	Wheel=CreateDefaultSubobject<USphereComponent>(TEXT("Wheel"));
+	Wheel=CreateDefaultSubobject<UCapsuleComponent>(TEXT("Wheel"));
 	
 	SpriteComponent->SetupAttachment(RootComponent);
 	Wheel->SetupAttachment(RootComponent);
@@ -30,20 +31,21 @@ ABoxActor::ABoxActor()
 	BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Min;
 	BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
 	
-	Box->SetBoxExtent(FVector(31,31,31));
+	Box->SetBoxExtent(FVector(30,30,30));
 	Box->SetPhysMaterialOverride(BotPhysMat);
 	Box->SetCollisionProfileName(TEXT("BlockAll"));
 	Box->GetBodyInstance()->bLockYTranslation = true;
-	Box->SetMassOverrideInKg(NAME_None, 0.0f, true);
+	Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
 	Box->SetSimulatePhysics(false);
 	
-	Wheel->SetSphereRadius(1.0f);
-	Wheel->SetRelativeLocation(FVector(0.f, 0.f, -30.8f));
+	Wheel->SetCapsuleSize(1.0f, 30.0f);
+	Wheel->SetRelativeLocation(FVector(0.f, 0.f, -29.8f));
 	Wheel->SetPhysMaterialOverride(BotPhysMat);
 	Wheel->SetCollisionProfileName(TEXT("BlockAll"));
 	Wheel->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	Wheel->SetMassOverrideInKg(NAME_None, 0.0f, true);
 	Wheel->SetSimulatePhysics(false);
+	Wheel->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
 	
 }
 

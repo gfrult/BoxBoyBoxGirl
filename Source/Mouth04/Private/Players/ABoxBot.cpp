@@ -19,6 +19,7 @@
 #include "GameInstance/MyGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Actors/GoalActor.h"
+#include "Components/CapsuleComponent.h"
 
 // Sets default values
 AABoxBot::AABoxBot()
@@ -60,7 +61,7 @@ AABoxBot::AABoxBot()
 	
 	//配置身体的碰撞体盒子的基础属性
 	BoxBody->SetPhysMaterialOverride(BotPhysMat);
-	BoxBody->SetBoxExtent(FVector(29.5f, 29.5f, 29.5f)); //设置大小
+	BoxBody->SetBoxExtent(FVector(31.0f, 31.0f, 31.0f)); //设置大小
 	BoxBody->SetSimulatePhysics(true);//开启boxbody的物理模拟,true:可以被推动,具有物理性;false:只有碰撞检测的效果
 	//锁定碰撞体盒子的旋转
 	BoxBody->GetBodyInstance()->bLockXRotation = true;
@@ -72,7 +73,7 @@ AABoxBot::AABoxBot()
 	BoxBody->SetNotifyRigidBodyCollision(true);
 	//配置脚的球形碰撞体的基础属性
 	BoxFoot->SetPhysMaterialOverride(BotPhysMat);
-	BoxFoot->SetSphereRadius(29.5f);
+	BoxFoot->SetSphereRadius(30.0f);
 	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));//相对Boxbody往下位移-12
 	BoxFoot->SetCollisionProfileName(TEXT("Pawn")); 
 	BoxFoot->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -84,10 +85,10 @@ AABoxBot::AABoxBot()
 	Wheel2->SetPhysMaterialOverride(BotPhysMat);
 	Wheel1->SetMassOverrideInKg(NAME_None, 0.0f, true);
 	Wheel2->SetMassOverrideInKg(NAME_None, 0.0f, true);
-	Wheel1->SetRelativeLocation(FVector(-29.5f, 0.f, -29.5f));
-	Wheel2->SetRelativeLocation(FVector(29.5f, 0.f, -29.5f));
-	Wheel1->SetSphereRadius(2.5f);
-	Wheel2->SetSphereRadius(2.5f);
+	Wheel1->SetRelativeLocation(FVector(-30.5f, 0.f, -30.0f));
+	Wheel2->SetRelativeLocation(FVector(30.5f, 0.f, -30.0f));
+	Wheel1->SetSphereRadius(2.0f);
+	Wheel2->SetSphereRadius(2.0f);
 	Wheel1->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	Wheel2->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	
@@ -325,6 +326,12 @@ void AABoxBot::Tick(float DeltaTime)
 	{
 		TryStandUp();
 	}
+	if (bIsZipping)
+	{
+		ProcessRetractMovement(DeltaTime);
+	}
+	
+	UpdateBoxColor();
 }
 
 // Called to bind functionality to input
@@ -576,8 +583,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     {
     	SpawnLoc = BoxChain.Last()->GetActorLocation()+ (Direction * 64.0f);
     	FVector Start = BoxChain.Last()->GetActorLocation();
-    	float TraceDist = (Direction.Z < 0) ? 59.0f : 6.0f; //判断检测方向，如果向下就检测一个方块的距离，否则只检测短距离
-    	TraceDist = (Direction.Z > 0) ? 59.0f : 20.0f;
+    	float TraceDist = (Direction.Z != 0) ? 62.0f : 6.0f; //判断检测方向，如果向下就检测一个方块的距离，否则只检测短距离
     	FVector End = Start + (Direction * TraceDist);
     	FHitResult HitResult;
     	FCollisionQueryParams CollisionParameters;
@@ -626,11 +632,8 @@ void AABoxBot::SpawnBox(FVector Direction)
     		if (Direction.Z == 0)return;
     		if (Direction.Z > 0) //向上
     		{
-			    //UE_LOG(LogTemp, Log, TEXT("向上"));
-			    //UE_LOG(LogTemp, Log, TEXT("%s"),*HitResult.GetActor()->GetName());
     			if (Cast<AABoxBot>(HitResult.GetActor())||Cast<AABoxBot>(HitResult.GetActor()))
     			{
-				    //UE_LOG(LogTemp, Log, TEXT("向上检测到"));
     				TArray<AActor*> OutTeam;
     				TSet<AActor*> Visited;
     				CollectJumpTeam(HitResult.GetActor(),OutTeam,Visited);
@@ -663,10 +666,10 @@ void AABoxBot::SpawnBox(FVector Direction)
     			{
     				float CurrentGap = FMath::Abs(Start.Z - HitResult.ImpactPoint.Z-30);
     				UE_LOG(LogTemp, Log, TEXT("%f"),CurrentGap);
-    				if (CurrentGap < 60.0f)//距离不够塞下一个方块
+    				if (CurrentGap < 64.0f)//距离不够塞下一个方块
     				{
 					    UE_LOG(LogTemp, Log, TEXT("CurrentGap < 60.0f"));
-    					float LiftHeight = 62 - CurrentGap;//需要抬升的高度
+    					float LiftHeight = 64 - CurrentGap;//需要抬升的高度
     					
     					
     					FHitResult RoofHit;
@@ -677,36 +680,11 @@ void AABoxBot::SpawnBox(FVector Direction)
     					TArray<AActor*> OutTeam;
     					TSet<AActor*> Visited;
     					CollectJumpTeam(this,OutTeam,Visited);
-    					
-    					//检测玩家本身上方有没有空位
-    					/*if (GetWorld()->SweepSingleByChannel(RoofHit, GetActorLocation(), GetActorLocation() + FVector(0,0,LiftHeight), FQuat::Identity, ECC_Visibility, CheckShape, RoofParams))
-    					{
-    						bRoofBlocked = true;
-    					}
-    					//检查每一个箱子上方是不是有空位
-    					if (!bRoofBlocked)
-    					{
-    						for (AActor* Box : BoxChain)
-    						{
-    							if (!IsValid(Box)) continue;
-    							FVector BoxStart = Box->GetActorLocation();
-    							FVector BoxEnd = BoxStart + FVector(0,0,LiftHeight);
-
-    							if (GetWorld()->SweepSingleByChannel(RoofHit,BoxStart, BoxEnd, FQuat::Identity, ECC_Visibility,CheckShape, RoofParams))
-    							{
-    								bRoofBlocked = true;
-    								break; 
-    							}
-    						}
-    					}*/
     					if (!CanTeamJump(OutTeam))
     					{
     						return;
     					}
-    					//if (bRoofBlocked) return;//如果没有位置就不生成
     					if (BoxChain.Num()>=MaxBoxNumber)return;
-    					/*BoxBody->SetPhysicsLinearVelocity(FVector::ZeroVector);
-    					AddActorWorldOffset(FVector(0, 0, LiftHeight), false);//先抬高玩家*/
     					for (AActor* Member:OutTeam)
     					{
     						if (!IsValid(Member)) continue;
@@ -717,7 +695,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     						}
     					}
     					
-    					SpawnLoc.Z = HitResult.ImpactPoint.Z + 28;
+    					SpawnLoc.Z = HitResult.ImpactPoint.Z + 32;
 					    UE_LOG(LogTemp, Log, TEXT("%f"),LiftHeight);
     				}
     			}
@@ -800,11 +778,15 @@ void AABoxBot::SpawnBox(FVector Direction)
 		NewBox->Box->SetPhysMaterialOverride(NewBox->BotPhysMat);
     
 		NewBox->Box->SetCollisionObjectType(MyChannel); 
+		//NewBox->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
 		
 		NewBox->Box->SetCollisionResponseToAllChannels(ECR_Block); 
 		NewBox->Box->SetCollisionResponseToChannel(MyChannel, ECR_Ignore); 
 		NewBox->Box->SetCollisionResponseToChannel(OtherChannel, ECR_Block); 
 	
+		NewBox->Wheel->SetPhysMaterialOverride(NewBox->BotPhysMat);
+		//NewBox->Wheel->SetMassOverrideInKg(NAME_None, 1000.0f, true);
+		
 		NewBox->Wheel->SetCollisionObjectType(MyChannel);
 		NewBox->Wheel->SetCollisionResponseToAllChannels(ECR_Block);
 		NewBox->Wheel->SetCollisionResponseToChannel(MyChannel, ECR_Ignore);
@@ -877,21 +859,21 @@ void AABoxBot::EndPutDownBox()
 bool AABoxBot::CheckIsHooked()
 {
 	if (BoxChain.Num()==0)return false;
-	HookBoxIndex();
 	
 	FHitResult HitResult;
 	FCollisionQueryParams CollisionParameters;
 	CollisionParameters.AddIgnoredActor(this);
 	CollisionParameters.AddIgnoredActors(BoxChain);
-	for (AActor* Box : BoxChain)
+	FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f));
+	for (int32 i = BoxChain.Num() - 1; i >= 0; i--)
 	{
-		if (!IsValid(Box)) continue;
-		FVector Start = Box->GetActorLocation();
-		FVector End = Start + FVector(0.0f, 0.0f, -35.0f);
-		bool IsHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility,CollisionParameters);
+		ABoxActor* BoxActor = Cast<ABoxActor>(BoxChain[i]);
+		if (!IsValid(BoxActor)) continue;
+		FVector Start = BoxActor->GetActorLocation();
+		FVector End = Start + FVector(0.0f, 0.0f, -5.0f);
+		bool IsHit = GetWorld()->SweepSingleByChannel(HitResult, Start, End,FQuat::Identity, ECC_Visibility, CheckShape,CollisionParameters);
 		if (IsHit)
 		{
-			UE_LOG(LogTemp, Log, TEXT("CheckIsHooked()"));
 			return true;
 		}
 	}
@@ -904,6 +886,7 @@ void AABoxBot::PutDownBox()
     if (BoxChain.Num() == 0) return;
     AActor* LeaderBox = BoxChain[0]; 
 	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSprite(BoxB);
+	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
     if (!IsValid(LeaderBox)) return;
 
     for (int32 i = 1; i < BoxChain.Num(); i++)
@@ -923,6 +906,7 @@ void AABoxBot::PutDownBox()
             	MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
             	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
             	
+            	MyBox->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
             	MyBox->Wheel->SetPhysMaterialOverride(MyBox->BotPhysMat);
             	MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
             	MyBox->SpriteComponent->SetSprite(BoxB);
@@ -948,6 +932,7 @@ void AABoxBot::PutDownBox()
     	MyLeader->Box->SetPhysMaterialOverride(MyLeader->BotPhysMat);
     	MyLeader->Wheel->SetPhysMaterialOverride(MyLeader->BotPhysMat);
     	MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
+
     	
     	MyLeader->Box->SetLinearDamping(1.0f);
     	MyLeader->Box->GetBodyInstance()->bLockXRotation = true;
@@ -1104,7 +1089,7 @@ bool AABoxBot::CanTeamJump(const TArray<AActor*>& TeamMembers)
 	{
 		if (!IsValid(Member)) continue;
 		FVector Start = Member->GetActorLocation();
-		FVector End = Start + FVector(0,0,10);
+		FVector End = Start + FVector(0,0,12);
 		
 		FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f));
 
@@ -1238,7 +1223,7 @@ int32 AABoxBot::HookBoxIndex()
 	FCollisionQueryParams CollisionParameters;
 	CollisionParameters.AddIgnoredActor(this);
 	CollisionParameters.AddIgnoredActors(BoxChain);
-
+	FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f));
 	//从最后一个箱子往前倒着查 
 	for (int32 i = BoxChain.Num() - 1; i >= 0; i--)
 	{
@@ -1246,14 +1231,13 @@ int32 AABoxBot::HookBoxIndex()
 		if (!IsValid(Box)) continue;
 
 		FVector Start = Box->GetActorLocation();
-		FVector End = Start + FVector(0.0f, 0.0f, -35.0f);
+		FVector End = Start + FVector(0.0f, 0.0f, -5.0f);
         
 		// 找到最远的一个钩住的
-		bool IsHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, CollisionParameters);
+		bool IsHit = GetWorld()->SweepSingleByChannel(HitResult, Start, End,FQuat::Identity, ECC_Visibility, CheckShape,CollisionParameters);
 
 		if (IsHit)
 		{
-			UE_LOG(LogTemp, Log, TEXT("HookBoxIndex Found: %d"), i);
 			return i; 
 		}
 	}
@@ -1261,12 +1245,129 @@ int32 AABoxBot::HookBoxIndex()
 	return -1;
 }
 
+void AABoxBot::StartRetract(int32 BoxIndex)
+{
+	BoxBody->SetSimulatePhysics(false);
+	if (BoxChain.Num() == 0) return;
+	
+	FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
+    for (int32 i = 0; i < BoxChain.Num(); i++)
+    {
+        AActor* Box = BoxChain[i];
+        if (IsValid(Box))
+        {
+        	Box->DetachFromActor(DetachRules);
+        	UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(Box->GetRootComponent());
+        	if (Root) Root->SetSimulatePhysics(false);
+        }
+    }
+	
+	bIsZipping = true;
+	CurrentAnchorIndex = BoxIndex;
+	RemainingBoxNumber=MaxBoxNumber;
+	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, 0.0f));
+	
+}
+
+void AABoxBot::ProcessRetractMovement(float DeltaTime)
+{
+	if (BoxChain.Num() == 0)
+	{
+		EndRetract(); 
+		return;
+	}
+	bool bHeadIsReady = false;
+	AActor* TargetBox = BoxChain[0];
+	if (IsValid(TargetBox))
+	{
+		FVector MyLoc = GetActorLocation();
+		FVector TargetLoc = TargetBox->GetActorLocation();
+		FVector NewLoc = FMath::VInterpConstantTo(MyLoc, TargetLoc, DeltaTime, 1000.0f);
+		SetActorLocation(NewLoc);
+		if (FVector::DistSquared(NewLoc,TargetLoc)<5.f)
+		{
+			if (CurrentAnchorIndex == 0)
+			{
+				SetActorLocation(NewLoc);
+				bHeadIsReady=true;
+			}
+			else
+			{
+				TargetBox->Destroy();
+				BoxChain.RemoveAt(0);
+				CurrentAnchorIndex--;
+			}
+		}
+	}
+	UE_LOG(LogTemp, Log, TEXT("%d,%d"),CurrentAnchorIndex,BoxChain.Num());
+	if (BoxChain.Num() > CurrentAnchorIndex + 1)
+	{
+		AActor* TailBox = BoxChain.Last();          // 最后一个箱子
+		AActor* TailTarget = BoxChain[BoxChain.Num() - 2]; // 倒数第二个箱子
+		if (IsValid(TailBox) && IsValid(TailTarget))
+		{
+			FVector TailLoc = TailBox->GetActorLocation();
+			FVector DestLoc = TailTarget->GetActorLocation();
+			
+			FVector NewTailLoc = FMath::VInterpConstantTo(TailLoc, DestLoc, DeltaTime, 1000.0f);
+			TailBox->SetActorLocation(NewTailLoc);
+			
+			if (FVector::DistSquared(NewTailLoc, DestLoc) < 5.f)
+			{
+				TailBox->Destroy();
+				BoxChain.Pop(); 
+			}
+		}
+	}
+	if (bHeadIsReady&&BoxChain.Num() == 1)
+	{
+		if (IsValid(BoxChain[0]))
+		{
+			BoxChain[0]->Destroy();
+		}
+		BoxChain.Empty();
+		EndRetract();
+	}
+}
+
+void AABoxBot::EndRetract()
+{
+	UE_LOG(LogTemp, Log, TEXT("结束伸缩"));
+	bIsZipping = false;
+	BoxFoot->SetRelativeLocation(FVector(0.f, 0.f, -12.0f));
+	BoxBody->SetSimulatePhysics(true);
+	RemainingBoxNumber=MaxBoxNumber;
+	UploadtoGameInstance();
+}
+
+void AABoxBot::UpdateBoxColor()
+{
+	if (BoxChain.Num() == 0)return;
+	for (AActor* Box : BoxChain)
+	{
+		ABoxActor* BoxActor = Cast<ABoxActor>(Box);
+		if (BoxActor)
+		{
+			BoxActor->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
+		}
+	}
+	int32 Index = HookBoxIndex();
+	if (Index!=-1)
+	{
+		if (ABoxActor* HookedBox = Cast<ABoxActor>(BoxChain[Index]))
+		{
+			HookedBox->SpriteComponent->SetSpriteColor(FLinearColor(0.6,0.2,0.2));
+		}
+		
+	}
+}
 
 void AABoxBot::ThrowBox(float ThrowVector)
 {
 	if (BoxChain.Num() == 0) return;
     AActor* LeaderBox = BoxChain[0]; 
 	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSprite(BoxB);
+	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
     if (!IsValid(LeaderBox)) return;
 
     for (int32 i = 1; i < BoxChain.Num(); i++)
@@ -1289,6 +1390,7 @@ void AABoxBot::ThrowBox(float ThrowVector)
             	MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
             	MyBox->Wheel->SetPhysMaterialOverride(MyBox->BotPhysMat);
             	MyBox->SpriteComponent->SetSprite(BoxB);
+            	MyBox->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
             	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
             }
         }
@@ -1323,7 +1425,7 @@ void AABoxBot::ThrowBox(float ThrowVector)
     	MyLeader->Box->RecreatePhysicsState();//刷新物理
     	MyLeader->Box->SetSimulatePhysics(true);
     }
-	MyLeader->Box->AddImpulse(FVector(12000*ThrowVector,0,35000));
+	MyLeader->Box->AddImpulse(FVector(120*ThrowVector,0,350), NAME_None, true);
 	DroppedBoxes = BoxChain;
 	
     BoxChain.Empty();     
@@ -1340,6 +1442,12 @@ void AABoxBot::BeginSpawnBox()
 {
 	if (BoxChain.Num())//如果身上有方块直接扔出去
 	{
+		if (CheckIsHooked())
+		{
+			StartRetract(HookBoxIndex());
+			UE_LOG(LogTemp, Log, TEXT("开始伸缩"));
+			return;
+		}
 		if (BoxYVector*PlayerXVector<0)//如果方块在背面，执行放下
 		{
 			PutDownBox();
@@ -1358,6 +1466,7 @@ void AABoxBot::BeginSpawnBox()
 
 void AABoxBot::EndSpawnBox()
 {
+	if (bIsZipping)return;
 	bIsSpawnMode=false;
 	//结束放置时如果脚下有生成的方块，直接执行放下方块
 	FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f)); 

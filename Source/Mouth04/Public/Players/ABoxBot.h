@@ -103,6 +103,10 @@ public:
 	UFUNCTION()
 	void  OnSpikeHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	int32 HookBoxIndex();
+	void StartRetract(int32 BoxIndex);
+	void ProcessRetractMovement(float DeltaTime);
+	void EndRetract();
+	void UpdateBoxColor();
 	
 	bool bIsSpawnMode;
 	bool bClockSpawnLeft;
@@ -122,6 +126,8 @@ public:
 	int8 MyID;
 	FVector RespawnLocation;
 	int32 PlayerStarNum=0;
+	bool bIsZipping=false;
+	int32 CurrentAnchorIndex;
 	
 private:
 	UPROPERTY()

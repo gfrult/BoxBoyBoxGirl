@@ -2,10 +2,10 @@
 
 
 #include "Actors/Star.h"
-#include "PaperFlipbook.h"
 #include "Players/ABoxBot.h"
 #include "PaperSpriteComponent.h"
 #include "Components/SphereComponent.h"
+#include "PaperSprite.h"
 
 
 // Sets default values
