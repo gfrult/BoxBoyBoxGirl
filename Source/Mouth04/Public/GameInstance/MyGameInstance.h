@@ -56,6 +56,9 @@ struct FLevelConfig : public FTableRowBase//关卡配置
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 P2MaxBoxes = 5;//玩家2最大盒子数
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bCanRetract = false;//是否可以伸缩
+	
 };
 
 UENUM()
@@ -92,6 +95,7 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	
 	UPROPERTY(BlueprintReadWrite, Category = "双人模式")
 	bool bIsTwoPlayerMode;//是否选择双人模式	
+	bool bIsRetractMode;
 	UPROPERTY()
 	EG_Widget G_WidgetChose = EG_Widget::Start;//标记需要加载的界面,初始化为start界面
 	

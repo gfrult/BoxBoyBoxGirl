@@ -59,6 +59,7 @@ void UMyGameInstance::SetMaxBox(FName LevelName)
 	FLevelConfig Config = GetLevelConfig(LevelName);
 	G_P1MaxBoxNumber = Config.P1MaxBoxes;
 	G_P2MaxBoxNumber = Config.P2MaxBoxes;
+	bIsRetractMode=Config.bCanRetract;
 }
 
 void UMyGameInstance::UpdateLevelProgress(FName LevelRowName, int32 StarsNum)

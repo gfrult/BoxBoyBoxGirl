@@ -30,15 +30,18 @@ void UStarWidget::SetStarNumber(int32 Number)
 		case 2:
 		Image_S1->SetVisibility(ESlateVisibility::Visible);
 		Image_S2->SetVisibility(ESlateVisibility::Visible);
+		break;
 		case 3:
 		Image_S1->SetVisibility(ESlateVisibility::Visible);
 		Image_S2->SetVisibility(ESlateVisibility::Visible);
 		Image_S3->SetVisibility(ESlateVisibility::Visible);
+		break;
 		case 4:
 		Image_S1->SetVisibility(ESlateVisibility::Visible);
 		Image_S2->SetVisibility(ESlateVisibility::Visible);
 		Image_S3->SetVisibility(ESlateVisibility::Visible);
 		Image_S4->SetVisibility(ESlateVisibility::Visible);	
+		break;
 		case 5:
 		Image_S1->SetVisibility(ESlateVisibility::Visible);
 		Image_S2->SetVisibility(ESlateVisibility::Visible);

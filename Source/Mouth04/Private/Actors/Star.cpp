@@ -50,25 +50,19 @@ void AStar::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherAct
 	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	AABoxBot* Bot = Cast<AABoxBot>(OtherActor);
-	UE_LOG(LogTemp, Log, TEXT("%s,%s"),*OtherActor->GetName(),*OtherComp ->GetName());
 	if (Bot)
 	{
 		if (OtherComp==Bot->GetRootComponent())
 		{
 			float Distance = FVector::Dist(Bot->GetActorLocation(), GetActorLocation());
-			
 			if (Distance > 80.0f) 
 			{
 				UE_LOG(LogTemp, Warning, TEXT("距离太远"));
 				return; 
 			}
-			UE_LOG(LogTemp, Log, TEXT("%s,%s"),*OtherActor->GetName(),*OtherComp ->GetName());
-			if (!Bot->PlayerStarNum)
-			{
-				Bot->PlayerStarNum++;
-				UE_LOG(LogTemp, Log, TEXT("获得星星"));
-				Destroy();
-			}
+			Bot->PlayerStarNum++;
+			UE_LOG(LogTemp, Log, TEXT("获得星星"));
+			Destroy();
 		}
 	}
 	

@@ -59,6 +59,7 @@ void AHomeGameModeBase::BeginPlay()
         Bot1 = GetWorld()->SpawnActor<AABoxBot>(ClassP1, P1_Loc, FRotator::ZeroRotator);
     	Bot1->MaxBoxNumber=GI->G_P1MaxBoxNumber;
     	Bot1->RemainingBoxNumber=GI->G_P1MaxBoxNumber;
+    	Bot1->bCanRetract=GI->bIsRetractMode;
     }
 
     APlayerController* PC1 = UGameplayStatics::GetPlayerController(this, 0);
@@ -85,6 +86,7 @@ void AHomeGameModeBase::BeginPlay()
             Bot2 = GetWorld()->SpawnActor<AABoxBot>(ClassP2, P2_Loc, FRotator::ZeroRotator);
         	Bot2->MaxBoxNumber=GI->G_P2MaxBoxNumber;
         	Bot2->RemainingBoxNumber=GI->G_P2MaxBoxNumber;
+        	Bot2->bCanRetract=GI->bIsRetractMode;
         }
 
         APlayerController* PC2 = UGameplayStatics::GetPlayerController(this, 1);

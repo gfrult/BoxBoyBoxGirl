@@ -120,7 +120,7 @@ void AGoalActor::TryToFinishLevel()
 					TotalStarsInLevel += Bot->PlayerStarNum;
 				}
 			}
-			UE_LOG(LogTemp, Log, TEXT("%d"), TotalStarsInLevel);
+			UE_LOG(LogTemp, Log, TEXT("关卡获得总星星数%d"), TotalStarsInLevel);
 			APlayerController* PC2 = UGameplayStatics::GetPlayerController(GetWorld(), 1);
     
 			if (PC2)
@@ -128,7 +128,7 @@ void AGoalActor::TryToFinishLevel()
 				UGameplayStatics::RemovePlayer(PC2, true);
 			}
 			
-			UGameplayStatics::OpenLevel(this, "M_Menu");
+			
 			FName LevelName=FName(*GetWorld()->GetName());
 			GI->UpdateLevelProgress(LevelName,TotalStarsInLevel);
 			GI->G_WidgetChose = EG_Widget::ChoseMap;

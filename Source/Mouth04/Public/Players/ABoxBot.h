@@ -128,6 +128,7 @@ public:
 	int32 PlayerStarNum=0;
 	bool bIsZipping=false;
 	int32 CurrentAnchorIndex;
+	bool bCanRetract=false;
 	
 private:
 	UPROPERTY()

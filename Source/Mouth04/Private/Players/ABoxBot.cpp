@@ -1342,6 +1342,7 @@ void AABoxBot::EndRetract()
 
 void AABoxBot::UpdateBoxColor()
 {
+	if (!bCanRetract)return;
 	if (BoxChain.Num() == 0)return;
 	for (AActor* Box : BoxChain)
 	{
@@ -1442,7 +1443,7 @@ void AABoxBot::BeginSpawnBox()
 {
 	if (BoxChain.Num())//如果身上有方块直接扔出去
 	{
-		if (CheckIsHooked())
+		if (CheckIsHooked()&&bCanRetract)
 		{
 			StartRetract(HookBoxIndex());
 			UE_LOG(LogTemp, Log, TEXT("开始伸缩"));
