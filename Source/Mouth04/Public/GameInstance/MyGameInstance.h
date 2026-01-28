@@ -16,7 +16,9 @@ enum class EGlobalPlayerType : uint8
 	None,       
 	Sheep,     
 	Pig,     
-	Cow    
+	Cow,
+	Chick,
+	Cat
 };
 
 UENUM(BlueprintType) 
