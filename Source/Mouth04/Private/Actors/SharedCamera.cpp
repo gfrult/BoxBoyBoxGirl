@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Engine/Scene.h"
 
 
 // Sets default values
@@ -49,7 +50,7 @@ void ASharedCamera::Tick(float DeltaTime)
 	
 	FVector TargetCenter;
 	float PlayersDistance = 0.0f;
-	float TargetOffsetZ = 50.0f;
+	float TargetOffsetZ = 100.0f;
 	if (P1 && P2)
 	{
 		if (P1->GetVelocity().Z<-200.0f||P2->GetVelocity().Z<-200.0f)
