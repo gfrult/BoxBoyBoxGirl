@@ -24,8 +24,6 @@ public:
 	virtual void NativeConstruct() override;//重写NativeConstruct()函数:通常用来做初始化逻辑（比如绑定按钮点击事件、播放初始动画）；
 	virtual void NativeDestruct() override;// 重写销毁函数：取消订阅（避免野指针） ==========
 	
-	UPROPERTY(meta=(BindWidgetAnim),Transient)
-	TObjectPtr<UWidgetAnimation> MainMenuAnim;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ShowSettingBtn;
 	
@@ -71,6 +69,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI|BoxNumber")
 	void UpdateP2RemainingBoxNumberText(int32 NewNumber);
 	
+	UFUNCTION()
+	void BindPlayerTexturesToImages(TSubclassOf<AABoxBot> PlayerSelectedClass, UImage* TargetImage_Player, UImage* TargetImage_Box);
+
 
 
 	
@@ -81,7 +82,7 @@ private:
 	UFUNCTION()
 	void OnP2RemainingBoxNumberChanged(int32 NewNumber);
 	// GameInstance指针（缓存，避免重复Cast）
-	TObjectPtr<UMyGameInstance> CachedGameInstance;
+	TObjectPtr<UMyGameInstance> GI;
 	
 	
 	

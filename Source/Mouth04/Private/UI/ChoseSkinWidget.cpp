@@ -87,6 +87,7 @@ void UChoseSkinWidget::OnClickedNext()
 		ChoseMapWidget->AddToViewport(); // 显示到屏幕
 	}
 	GI->G_WidgetChose = EG_Widget::ChoseMap;//标记进入游戏选择界面
+	GI->LoadAndPlaySound2D();//播放音效
 	this->RemoveFromParent();
 	UE_LOG(LogTemp, Log, TEXT("UMG: chose skin 已从视口移除！"));
 }
@@ -120,12 +121,14 @@ void UChoseSkinWidget::OnClickedUp()
 		ChosePlayersWidget->AddToViewport(); // 显示到屏幕
 	}	
 	GI->G_WidgetChose = EG_Widget::ChosePlayer;//标记进入游戏选择界面
+	GI->LoadAndPlaySound2D();//播放音效
 	this->RemoveFromParent();
 	UE_LOG(LogTemp, Log, TEXT("UMG: chose skin 已从视口移除！"));
 }
 
 void UChoseSkinWidget::OnClickedChange()//双人模式下
 {
+	GI->LoadAndPlaySound2D();//播放音效
 	if (CurrentPlayer==1)
 	{
 		PlayAnimation(Anim_ToP2);
@@ -142,6 +145,7 @@ void UChoseSkinWidget::OnClickedChange()//双人模式下
 
 void UChoseSkinWidget::OnClickedSheep()
 {
+	GI->LoadAndPlaySound2D();//播放音效
 	Image_ChoseP1->SetVisibility(ESlateVisibility::Visible);
 	Image_LockAnimal->SetVisibility(ESlateVisibility::Hidden);
 	if (bIsTowPlayer)//双人模式
@@ -179,6 +183,7 @@ void UChoseSkinWidget::OnClickedSheep()
 
 void UChoseSkinWidget::OnClickedPig()
 {
+	GI->LoadAndPlaySound2D();//播放音效
 	Image_ChoseP1->SetVisibility(ESlateVisibility::Visible);
 	Image_LockAnimal->SetVisibility(ESlateVisibility::Hidden);
 	if (bIsTowPlayer)//双人模式
@@ -216,6 +221,7 @@ void UChoseSkinWidget::OnClickedPig()
 
 void UChoseSkinWidget::OnClickedCow()
 {
+	GI->LoadAndPlaySound2D();//播放音效
 	Image_ChoseP1->SetVisibility(ESlateVisibility::Visible);
 	Image_LockAnimal->SetVisibility(ESlateVisibility::Hidden);
 	if (bIsTowPlayer)//双人模式
@@ -253,6 +259,7 @@ void UChoseSkinWidget::OnClickedCow()
 
 void UChoseSkinWidget::OnClickedChick()
 {
+	GI->LoadAndPlaySound2D();//播放音效
 	Image_ChoseP1->SetVisibility(ESlateVisibility::Visible);
 	Image_LockAnimal->SetVisibility(ESlateVisibility::Hidden);
 	if (bIsTowPlayer)//双人模式
@@ -293,6 +300,7 @@ void UChoseSkinWidget::OnClickedChick()
 
 void UChoseSkinWidget::OnClickedCat()
 {
+	GI->LoadAndPlaySound2D();//播放音效
 	Image_ChoseP1->SetVisibility(ESlateVisibility::Visible);
 	Image_LockAnimal->SetVisibility(ESlateVisibility::Hidden);
 	if (bIsTowPlayer)//双人模式
@@ -330,6 +338,7 @@ void UChoseSkinWidget::OnClickedCat()
 
 void UChoseSkinWidget::OnClickedAnim()
 {
+	
 	Image_LockAnimal->SetVisibility(ESlateVisibility::Visible);
 	if (CurrentPlayer==1)
 	{

@@ -75,6 +75,7 @@ void USelsectPlayerWidget::ChoseOne()
 	if (GameInstance)
 	{
 		GameInstance->bIsTwoPlayerMode = false;
+		GameInstance->LoadAndPlaySound2D();//播放音效
 	}
 }
 
@@ -94,6 +95,7 @@ void USelsectPlayerWidget::ChoseTwo()
 	if (GameInstance)
 	{
 		GameInstance->bIsTwoPlayerMode = true;
+		GameInstance->LoadAndPlaySound2D();//播放音效
 	}
 }
 
@@ -167,6 +169,7 @@ void USelsectPlayerWidget::OnClickedNext()
 		ChoseSkinWidget->AddToViewport(); // 显示到屏幕
 	}	
 	GameInstance->G_WidgetChose = EG_Widget::ChoseSkin;//标记进入皮肤选择界面
+	GameInstance->LoadAndPlaySound2D();//播放音效
 	this->RemoveFromParent();
 	UE_LOG(LogTemp, Log, TEXT("UMG: SelectPlayerWidget已从视口移除！"));
 }

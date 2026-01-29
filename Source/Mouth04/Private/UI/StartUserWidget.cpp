@@ -35,7 +35,7 @@ void UStartUserWidget::StartGame()
 	UMyGameInstance* GameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 
 	UE_LOG(LogTemp, Log, TEXT("UMG:点击开始游戏"));
-	
+	GameInstance->LoadAndPlaySound2D();//播放音效
 	if (!ChosePlayersWidget)
 	{
 		TSubclassOf<USelsectPlayerWidget> WidgetClass = LoadClass<USelsectPlayerWidget>

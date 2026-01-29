@@ -4,6 +4,7 @@
 #include "Math/UnrealMathUtility.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/DataTable.h"
+#include "Kismet/GameplayStatics.h"
 #include "Players/ABoxBot.h"
 
 
@@ -148,6 +149,48 @@ void UMyGameInstance::MarkLevelAsSeen(FName LevelRowName)
 	if (Data)
 	{
 		Data->UnlockStatus = ELevelStatus::Unlocked;
+	}
+}
+
+// 全局通用 2D 音效播放函数（BlueprintCallable 支持全项目蓝图/代码调用）
+void UMyGameInstance::LoadAndPlaySound2D(const FString& SoundPath, float Volume)
+{
+	// 步骤1：安全检查：音效路径不能为空
+	if (SoundPath.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("【全局音效】失败：音效路径为空！"));
+		return;
+	}
+
+	// 步骤2：获取有效的世界上下文（GameInstance 中通过 GetWorld() 获取，全局可用）
+	UWorld* CurrentWorld = GetWorld();
+
+	// 步骤3：加载 SoundWave 音效资源（UE 自动缓存，重复加载不占用额外内存）
+	USoundWave* TargetSound = LoadObject<USoundWave>(
+		nullptr,
+		*SoundPath,
+		nullptr,
+		LOAD_None
+	);
+
+	// 步骤4：安全检查 + 播放 2D 音效
+	if (IsValid(TargetSound))
+	{
+		// 音量钳制：避免传入异常值导致音效问题（0.0f ~ 2.0f 区间）
+		float ClampedVolume = FMath::Clamp(Volume, 0.0f, 2.0f);
+
+		// 播放全局 2D 音效（无空间衰减，全场景可听）
+		UGameplayStatics::PlaySound2D(
+			CurrentWorld,
+			TargetSound,
+			ClampedVolume,
+			1.0f, // 固定原始音调（已移除 Pitch 参数）
+			0.0f
+		);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("【音效】失败：加载音效资源失败！路径：%s"), *SoundPath);
 	}
 }
 

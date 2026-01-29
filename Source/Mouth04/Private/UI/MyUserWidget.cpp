@@ -4,6 +4,7 @@
 #include "UI/MyUserWidget.h"
 // UE内置头文件：包含UI动画、按钮事件相关函数
 #include "Components/Button.h"
+#include "Players/ABoxBot.h"
 #include "Animation/WidgetAnimation.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
@@ -19,12 +20,6 @@ void UMyUserWidget::NativeConstruct()
 {
 	Super::NativeConstruct();// 必须调用父类的NativeConstruct，保证基类逻辑执行
 	
-	// 播放主菜单初始化动画（绑定的MainMenuAnim）
-	if (MainMenuAnim)
-	{
-		PlayAnimation(MainMenuAnim); // UE内置函数：播放Widget动画
-	}
-
 	// 绑定按钮点击事件（核心交互逻辑）
 	if (ShowSettingBtn)
 	{
@@ -41,13 +36,13 @@ void UMyUserWidget::NativeConstruct()
 	}
 		
 	// 订阅委托
-	CachedGameInstance=GameInstance;
-	CachedGameInstance->OnP1RemainingBoxNumberChanged.AddDynamic
+	GI=GameInstance;
+	GI->OnP1RemainingBoxNumberChanged.AddDynamic
 	(
 		this,
 		&UMyUserWidget::OnRemainingBoxNumberChanged
 	);
-	CachedGameInstance->OnP2RemainingBoxNumberChanged.AddDynamic
+	GI->OnP2RemainingBoxNumberChanged.AddDynamic
 	(
 		this,
 		&UMyUserWidget::OnP2RemainingBoxNumberChanged
@@ -57,28 +52,13 @@ void UMyUserWidget::NativeConstruct()
 	FText P1MaxBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P1MaxBoxNumber));
 	SetTextBlockContent(TextBlock_P1MaxNum,P1MaxBoxNumberText);
 	//  初始化显示当前剩余箱子数（避免UI初始为空）
-	UpdateP1RemainingBoxNumberText(CachedGameInstance->GetP1RemainingBoxNumber());
+	UpdateP1RemainingBoxNumberText(GI->GetP1RemainingBoxNumber());
 	FText P1RemainingBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P1RemainingBoxNumber));	
 	SetTextBlockContent(TextBlock_P1CanUseNum,P1RemainingBoxNumberText);
-	EGlobalPlayerType P1Type = GameInstance->G_P1PlayerType;
-	switch (P1Type)
-	{
-		case EGlobalPlayerType::Sheep:
-			SetImageByPath(Image_P1,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Sheep01.UI_Sheep01'"));
-			SetImageByPath(Image_P1Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxSheepA.UI_BoxSheepA'"));
-			break;
-		case EGlobalPlayerType::Pig:
-			SetImageByPath(Image_P1,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Pig01.UI_Pig01'"));
-			SetImageByPath(Image_P1Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxpigA.UI_BoxpigA'"));	
-			break;
-		case EGlobalPlayerType::None:
-			UE_LOG(LogTemp, Error, TEXT("玩家1 type为None!!!!"));
-			break;
-	}
-
+	// 读取GI数据,更新玩家头像UI
+	BindPlayerTexturesToImages(GI->G_P1SelectedClass, Image_P1.Get(), Image_P1Box.Get());
 	
 	//初始化玩家2的数值和图标
-	EGlobalPlayerType P2Type = GameInstance->G_P2PlayerType;
 	if (GameInstance->bIsTwoPlayerMode==false)
 	{
 		HorizontalBox_P2->SetVisibility(ESlateVisibility::Hidden);//隐藏P2条形框
@@ -88,21 +68,9 @@ void UMyUserWidget::NativeConstruct()
 		HorizontalBox_P2->SetVisibility(ESlateVisibility::Visible);
 		FText P2MaxBoxNumberText = FText::FromString(FString::Printf(TEXT("%d"), GameInstance->G_P2MaxBoxNumber));
 		SetTextBlockContent(TextBlock_P2MaxNum,P2MaxBoxNumberText);
-		UpdateP2RemainingBoxNumberText(CachedGameInstance->GetP2RemainingBoxNumber());
-		switch (P2Type)
-        {
-        case EGlobalPlayerType::Sheep:
-        	SetImageByPath(Image_P2,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Sheep01.UI_Sheep01'"));
-        	SetImageByPath(Image_P2Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxSheepA.UI_BoxSheepA'"));
-        	break;
-        case EGlobalPlayerType::Pig:
-        	SetImageByPath(Image_P2,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_Pig01.UI_Pig01'"));
-        	SetImageByPath(Image_P2Box,TEXT("/Script/Engine.Texture2D'/Game/MyBoxGame/Textures/UI/Icons/UI_BoxpigA.UI_BoxpigA'"));	
-        	break;
-        case EGlobalPlayerType::None:
-        	UE_LOG(LogTemp, Error, TEXT("玩家2 type为None!!!!"));
-        	break;
-		}
+		UpdateP2RemainingBoxNumberText(GI->GetP2RemainingBoxNumber());
+		// 读取GI数据,更新玩家头像UI
+		BindPlayerTexturesToImages(GI->G_P2SelectedClass, Image_P2.Get(), Image_P2Box.Get());
 	}
 	
 }
@@ -112,9 +80,9 @@ void UMyUserWidget::NativeDestruct()
 {
 	Super::NativeDestruct();
 
-	if (IsValid(CachedGameInstance))
+	if (IsValid(GI))
 	{
-		CachedGameInstance->OnP1RemainingBoxNumberChanged.RemoveAll(this);
+		GI->OnP1RemainingBoxNumberChanged.RemoveAll(this);
 	}
 }
 
@@ -235,3 +203,53 @@ void UMyUserWidget::UpdateP2RemainingBoxNumberText(int32 NewNumber)
 	}
 }
 
+// 工具函数：通用纹理绑定函数（适配任意玩家）
+void UMyUserWidget::BindPlayerTexturesToImages(TSubclassOf<AABoxBot> PlayerSelectedClass, UImage* TargetImage_Player, UImage* TargetImage_Box)
+{
+	// 安全检查：传入的 Image 控件不能为空
+	if (!IsValid(TargetImage_Player) || !IsValid(TargetImage_Box))
+	{
+		UE_LOG(LogTemp, Error, TEXT("通用绑定失败：玩家图片控件为空！"));
+		return;
+	}
+
+	// 安全检查：玩家选择的类不能为空
+	if (!PlayerSelectedClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("通用绑定失败：玩家选择的类无效，清空对应图片控件"));
+		// 清空两个 Image 控件
+		SetImageByPath(TargetImage_Player, TEXT(""));
+		SetImageByPath(TargetImage_Box, TEXT(""));
+		return;
+	}
+
+	// 获取 CDO 提取纹理
+	AABoxBot* ClassDefaultObject = PlayerSelectedClass->GetDefaultObject<AABoxBot>();
+	if (!ClassDefaultObject)
+	{
+		UE_LOG(LogTemp, Error, TEXT("通用绑定失败：获取 AABoxBot CDO 失败！"));
+		return;
+	}
+
+	// 绑定 PlayerType 到 TargetImage_Player
+	if (UTexture2D* PlayerTexture = ClassDefaultObject->PlayerType)
+	{
+		SetImageByPath(TargetImage_Player, PlayerTexture->GetPathName());
+	}
+	else
+	{
+		SetImageByPath(TargetImage_Player, TEXT(""));
+		UE_LOG(LogTemp, Warning, TEXT("通用绑定：PlayerType 纹理为空，清空玩家图片控件"));
+	}
+
+	// 绑定 BoxType 到 TargetImage_Box
+	if (UTexture2D* BoxTexture = ClassDefaultObject->BoxType)
+	{
+		SetImageByPath(TargetImage_Box, BoxTexture->GetPathName());
+	}
+	else
+	{
+		SetImageByPath(TargetImage_Box, TEXT(""));
+		UE_LOG(LogTemp, Warning, TEXT("通用绑定：BoxType 纹理为空，清空玩家箱子图片控件"));
+	}
+}

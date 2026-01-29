@@ -111,8 +111,7 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	TSubclassOf<AABoxBot> G_P1SelectedClass; //存储AABoxBot类的子类型
 	
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
-	EGlobalPlayerType G_P1PlayerType = EGlobalPlayerType::Sheep;//在选择皮肤阶段进行 赋值,需要替换
-
+	EGlobalPlayerType G_P1PlayerType = EGlobalPlayerType::Sheep;
 	
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
 	int32 G_P1MaxBoxNumber = 0;//在选择关卡阶段,通过读取关卡的数据 进行赋值
@@ -176,8 +175,6 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	void SetMaxBox(FName LevelName);
 	
 	
-	
-	
 	//关卡进度map
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveData")
 	TMap<FName, FLevelData> LevelProgressMap;
@@ -200,4 +197,11 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	
 	UFUNCTION(BlueprintCallable, Category = "SaveData")
 	void MarkLevelAsSeen (FName LevelRowName);
+	
+	// 全局通用 2D 音效播放函数（BlueprintCallable 支持全项目蓝图/代码调用）
+	UFUNCTION(BlueprintCallable, Category = "Global|Sound")
+	void LoadAndPlaySound2D(
+		const FString& SoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Botton_Sound.Botton_Sound"), 
+		float Volume = 1.0f
+	);//默认值是bottom点击的音效
 };
