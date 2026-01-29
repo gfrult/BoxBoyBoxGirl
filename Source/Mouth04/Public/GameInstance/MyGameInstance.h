@@ -61,6 +61,8 @@ struct FLevelConfig : public FTableRowBase//关卡配置
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bCanRetract = false;//是否可以伸缩
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USoundBase* GameBGM;//背景音乐
 };
 
 UENUM()

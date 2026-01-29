@@ -6,6 +6,7 @@
 #include "PaperSpriteComponent.h"
 #include "Components/SphereComponent.h"
 #include "PaperSprite.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
@@ -29,6 +30,11 @@ AStar::AStar()
 	if (StarPF.Object)
 	{
 		StarSpriteCom->SetSprite(StarPF.Object);
+	}
+	static ConstructorHelpers::FObjectFinder<USoundBase> GetStar(TEXT("/Script/Engine.SoundWave'/Game/MyBoxGame/Sounds/SoundEffects/GetStar.GetStar'"));
+	if (GetStar.Object)
+	{
+		Sound_GetStar = GetStar.Object;
 	}
 }
 
@@ -61,6 +67,7 @@ void AStar::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherAct
 				return; 
 			}
 			Bot->PlayerStarNum++;
+			UGameplayStatics::PlaySoundAtLocation(this, Sound_GetStar, GetActorLocation());
 			UE_LOG(LogTemp, Log, TEXT("获得星星"));
 			Destroy();
 		}

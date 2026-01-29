@@ -138,6 +138,21 @@ AABoxBot::AABoxBot()
 		UpArrow=UpArrowPS.Object;
 	}
 	
+	static ConstructorHelpers::FObjectFinder<USoundBase> FallToTheGround(TEXT("/Script/Engine.SoundWave'/Game/MyBoxGame/Sounds/SoundEffects/FallToTheGround.FallToTheGround'"));
+	if (FallToTheGround.Object)
+	{
+		Sound_Land = FallToTheGround.Object;
+	}
+	static ConstructorHelpers::FObjectFinder<USoundBase> SpawnBox(TEXT("/Script/Engine.SoundWave'/Game/MyBoxGame/Sounds/SoundEffects/SpawnBox.SpawnBox'"));
+	if (SpawnBox.Object)
+	{
+		Sound_SpawnBox = SpawnBox.Object;
+	}
+	static ConstructorHelpers::FObjectFinder<USoundBase> DestroyBox(TEXT("/Script/Engine.SoundWave'/Game/MyBoxGame/Sounds/SoundEffects/BoxDestroy.BoxDestroy'"));
+	if (DestroyBox.Object)
+	{
+		Sound_DestroyBox = DestroyBox.Object;
+	}
 	
 	BodySpriteComponent->SetSprite(BodySprite);
 	
@@ -219,6 +234,7 @@ void AABoxBot::Tick(float DeltaTime)
 	// 落地瞬间：播放下蹲动画 + 启动计时器
 	if (bJustLanded && FootFlipbookComponent && SquatPaperFlipbook)
 	{
+		UGameplayStatics::PlaySoundAtLocation(this, Sound_Land, GetActorLocation());
 		// 切换下蹲动画
 		bIsPlayingSquat = true;
 		//将身体表情和腿同步往下相对位移-4
@@ -606,6 +622,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     				if (IsValid(BoxToKill))
     				{
     					BoxToKill->Destroy();
+    					UGameplayStatics::PlaySoundAtLocation(this, Sound_DestroyBox, GetActorLocation());
     					RemainingBoxNumber++;
     					UploadtoGameInstance();
     				}
@@ -621,6 +638,7 @@ void AABoxBot::SpawnBox(FVector Direction)
     				if (IsValid(BoxToKill))
     				{
     					BoxToKill->Destroy();
+    					UGameplayStatics::PlaySoundAtLocation(this, Sound_DestroyBox, GetActorLocation());
     					RemainingBoxNumber++;
     					UploadtoGameInstance();
     				}
@@ -759,7 +777,7 @@ void AABoxBot::SpawnBox(FVector Direction)
 	ABoxActor* NewBox = GetWorld()->SpawnActor<ABoxActor>(ABoxActor::StaticClass(), SpawnLoc, FRotator::ZeroRotator, SpawnParams);
 	if (NewBox)
 	{
-		
+		UGameplayStatics::PlaySoundAtLocation(this, Sound_SpawnBox, GetActorLocation());
 		NewBox->SpriteComponent->SetSprite(BoxA);
 
 	
@@ -966,6 +984,7 @@ void AABoxBot::RemoveDroppedBoxes()
 		}
 	}
 	DroppedBoxes.Empty();
+	UGameplayStatics::PlaySoundAtLocation(this, Sound_DestroyBox, GetActorLocation());
 }
 
 //切换为跳跃动画

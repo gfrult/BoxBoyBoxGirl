@@ -49,6 +49,12 @@ void AHomeGameModeBase::BeginPlay()
         // 如果 GI 里存了有效的类，就覆盖默认值
         if (GI->G_P1SelectedClass) ClassP1 = GI->G_P1SelectedClass;
         if (GI->G_P2SelectedClass) ClassP2 = GI->G_P2SelectedClass;
+    	FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this);
+    	FLevelConfig LevelData = GI->GetLevelConfig(FName(*CurrentLevelName));
+    	if (LevelData.GameBGM)
+    	{
+    		UGameplayStatics::SpawnSound2D(this, LevelData.GameBGM);
+    	}
     }
 	
     AABoxBot* Bot1 = nullptr;

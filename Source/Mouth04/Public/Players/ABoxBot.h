@@ -136,4 +136,9 @@ private:
 	bool bIsPlayingSquat = false; // 是否正在播放下蹲动画
 	bool bWasOnGround = false;
 	
+	
+	class USoundBase* Sound_Land;//落地音效
+	class USoundBase* Sound_SpawnBox;//落地音效
+	class USoundBase* Sound_DestroyBox;//落地音效
+	
 };
