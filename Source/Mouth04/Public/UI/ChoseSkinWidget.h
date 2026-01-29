@@ -54,8 +54,6 @@ public:
 	
 	UPROPERTY(meta=(BindWidget))
     UWidgetSwitcher* WidgetSwitcher_PlayerMode;
-	UPROPERTY(BlueprintReadOnly, meta=(BindWidget), Category="UI|Overlay")
-	UOverlay* Overlay_Skin;
 	
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> Button_Pig;

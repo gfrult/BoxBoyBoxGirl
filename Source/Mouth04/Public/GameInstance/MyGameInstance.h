@@ -102,8 +102,8 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	bool bIsRetractMode;
 	UPROPERTY()
 	EG_Widget G_WidgetChose = EG_Widget::Start;//标记需要加载的界面,初始化为start界面
-	
-	
+	UPROPERTY()
+	bool bIsShowSetting;
 
 	//P1
 

@@ -14,11 +14,26 @@
 #include "Components/HorizontalBox.h"
 #include "Math/UnrealMathUtility.h"
 #include "GameInstance/MyGameInstance.h"
-
+#include "ExitWidget.h"
+#include "Components/CanvasPanel.h"
+#include "Blueprint/UserWidget.h"
 
 void UMyUserWidget::NativeConstruct()
 {
 	Super::NativeConstruct();// 必须调用父类的NativeConstruct，保证基类逻辑执行
+	
+	SittingWidgetClass = LoadClass<UUserWidget>(
+	nullptr, // 类加载器，无需指定，传 nullptr 即可
+	TEXT("/Game/Blueprints/UMG/U_Sitting.U_Sitting_C") );
+	// 验证蓝图是否加载成功
+	if (!IsValid(SittingWidgetClass))
+	{
+		UE_LOG(LogTemp, Error, TEXT("【NewWidget】加载 U_Sitting 蓝图失败！请检查路径是否正确（需加 .xxx_C 后缀）！"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("【NewWidget】U_Sitting 蓝图加载成功！"));
+	}
 	
 	// 绑定按钮点击事件（核心交互逻辑）
 	if (ShowSettingBtn)
@@ -26,7 +41,7 @@ void UMyUserWidget::NativeConstruct()
 		// 点击ShowSettingBtn这个按钮,会执行ShowSettingWidget这个函数
 		ShowSettingBtn->OnClicked.AddDynamic(this, &UMyUserWidget::ShowSettingWidget);
 	}
-	
+	CanvasPanel_Setting->SetVisibility(ESlateVisibility::Hidden);
 	//获取 UE 全局唯一的 GameInstance 实例，并将其转换为我们自定义的UMyGameInstance类型，从而访问其中的全局变量（如枚举、数值）
 	UMyGameInstance* GameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
 	if (!IsValid(GameInstance))
@@ -72,7 +87,7 @@ void UMyUserWidget::NativeConstruct()
 		// 读取GI数据,更新玩家头像UI
 		BindPlayerTexturesToImages(GI->G_P2SelectedClass, Image_P2.Get(), Image_P2Box.Get());
 	}
-	
+	GI->bIsShowSetting=false;
 }
 
 // UI销毁：取消委托订阅（可选，AddUObject已处理，但显式取消更安全）
@@ -86,18 +101,31 @@ void UMyUserWidget::NativeDestruct()
 	}
 }
 
-
-
 void UMyUserWidget::ShowSettingWidget()
 {
-	// 这里写“显示设置界面”的具体逻辑：
-	// 1. 加载/创建设置界面Widget
-	// 2. 显示设置界面（AddToViewport）
-	// 3. 隐藏当前主菜单（可选）
-	// 示例逻辑：
-	UE_LOG(LogTemp, Log, TEXT("UMG:按钮功能测试   _点击了显示设置按钮，准备显示设置界面！"));
+	if (GI->bIsShowSetting==true) return;
+	UE_LOG(LogTemp, Log, TEXT("点击setting按钮"));
+	UWorld* CurrentWorld = GetWorld();
+	if (!CurrentWorld)
+	{
+		UE_LOG(LogTemp, Error, TEXT("【NewWidget】世界上下文无效，无法创建 U_Sitting 实例！"));
+		return;
+	}
+	// 创建 U_Sitting 实例（每次点击都创建新实例）
+	UUserWidget* NewSittingWidget = CreateWidget<UUserWidget>(
+		CurrentWorld,
+		SittingWidgetClass
+	);
+	if (!IsValid(NewSittingWidget))
+	{
+		UE_LOG(LogTemp, Error, TEXT("创建 U_Sitting 实例失败！"));
+		return;
+	}
+	PauseGame();
+	NewSittingWidget->AddToViewport(10); 
+	GI->bIsShowSetting=true;
+	UE_LOG(LogTemp, Log, TEXT("U_Sitting 已成功添加到游戏视口！"));
 }
-
 
 // ========== 通用函数：修改任意文本块内容 ==========
 void UMyUserWidget::SetTextBlockContent(UTextBlock* TargetTextBlock, const FText& NewText)
@@ -160,7 +188,6 @@ void UMyUserWidget::SetImageByPath(UImage* TargetImage, const FString& ImagePath
 }
 
 
-
 // 委托处理函数：接收剩余箱子数并更新UI
 void UMyUserWidget::OnRemainingBoxNumberChanged(int32 NewNumber)
 {
@@ -171,8 +198,6 @@ void UMyUserWidget::OnP2RemainingBoxNumberChanged(int32 NewNumber)
 {
 	UpdateP2RemainingBoxNumberText(NewNumber);
 }
-
-
 
 // 现有箱子数更新函数
 void UMyUserWidget::UpdateP1RemainingBoxNumberText(int32 NewNumber)
@@ -252,4 +277,47 @@ void UMyUserWidget::BindPlayerTexturesToImages(TSubclassOf<AABoxBot> PlayerSelec
 		SetImageByPath(TargetImage_Box, TEXT(""));
 		UE_LOG(LogTemp, Warning, TEXT("通用绑定：BoxType 纹理为空，清空玩家箱子图片控件"));
 	}
+}
+
+
+// 封装暂停游戏逻辑
+void UMyUserWidget::PauseGame()
+{
+	if (!GetWorld())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("【ExitWidget】无法暂停游戏：世界上下文无效！"));
+		return;
+	}
+
+	// 核心函数：设置游戏为暂停状态
+	UGameplayStatics::SetGamePaused(GetWorld(), true);
+	
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (IsValid(PlayerController))
+	{
+		PlayerController->SetInputMode(FInputModeUIOnly()); // 仅允许 UI 输入，禁止游戏操作
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("【ExitWidget】游戏已暂停！"));
+}
+
+// 封装恢复游戏逻辑
+void UMyUserWidget::ResumeGame()
+{
+	if (!GetWorld())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("【ExitWidget】无法恢复游戏：世界上下文无效！"));
+		return;
+	}
+
+	// 核心函数：设置游戏为运行状态
+	UGameplayStatics::SetGamePaused(GetWorld(), false);
+	
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (IsValid(PlayerController))
+	{
+		PlayerController->SetInputMode(FInputModeGameOnly()); // 仅允许游戏输入，禁止 UI 操作
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("【ExitWidget】游戏已恢复运行！"));
 }

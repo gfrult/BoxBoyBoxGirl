@@ -4,6 +4,9 @@
 #include "Blueprint/UserWidget.h"
 #include "MyUserWidget.generated.h"
 
+class UCanvasPanel;
+class AABoxBot;
+class UExitWidget;
 //前向声明
 class UButton;	   //按钮控件
 class UTextBlock;  // 文本块控件
@@ -11,7 +14,7 @@ class UImage;      // 图片控件
 class UTexture2D;  // 纹理类
 class UHorizontalBox;
 class UMyGameInstance;
-
+class UUserWidget;
 
 
 UCLASS()
@@ -49,6 +52,11 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "UI|HorizontalBox")
 	TObjectPtr<UHorizontalBox> HorizontalBox_P2;
 
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UCanvasPanel>  CanvasPanel_Setting;
+	
+	TSubclassOf<UUserWidget> SittingWidgetClass;
+	
 	// ========== 通用函数：修改任意文本块内容 ==========
 	UFUNCTION(BlueprintCallable, Category = "UI|Text")
 	void SetTextBlockContent(
@@ -71,9 +79,11 @@ public:
 	
 	UFUNCTION()
 	void BindPlayerTexturesToImages(TSubclassOf<AABoxBot> PlayerSelectedClass, UImage* TargetImage_Player, UImage* TargetImage_Box);
-
-
-
+	
+	UFUNCTION()
+	void PauseGame();
+	UFUNCTION()
+	void ResumeGame();
 	
 private:
 	// 委托处理函数：接收剩余箱子数并更新UI
@@ -83,8 +93,5 @@ private:
 	void OnP2RemainingBoxNumberChanged(int32 NewNumber);
 	// GameInstance指针（缓存，避免重复Cast）
 	TObjectPtr<UMyGameInstance> GI;
-	
-	
-	
 	
 };

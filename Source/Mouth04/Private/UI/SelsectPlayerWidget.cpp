@@ -39,6 +39,7 @@ void USelsectPlayerWidget::NativeConstruct()
 		Button_Next->OnClicked.AddDynamic(this, &USelsectPlayerWidget::OnClickedNext);
 	}
 	GameInstance = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	GameInstance->bIsShowSetting=false;
 	bChosed = false;
 	if (Image_OneBGLight)
 	{
