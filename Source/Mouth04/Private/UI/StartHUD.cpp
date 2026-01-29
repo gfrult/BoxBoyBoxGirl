@@ -10,6 +10,9 @@
 #include "StartUserWidget.h"
 #include "GameInstance/MyGameInstance.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Components/AudioComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundWave.h"
 
 
 void AStartHUD::BeginPlay()
@@ -19,6 +22,10 @@ void AStartHUD::BeginPlay()
 	GetOwningPlayerController()->SetShowMouseCursor(true);//显示鼠标
 	//关闭玩家控制器的输入操作
 	//GetOwningPlayerController()->SetInputMode(FInputModeUIOnly());
+
+	//循环播放BGM
+	PlayLoopBGM();
+	
 	// 游戏启动时，根据 GameInstance 枚举加载对应界面
 	LoadWidgetByGameInstanceEnum();
 }
@@ -41,30 +48,6 @@ void AStartHUD::CreateStartMenu()
 		}
 	}
 }
-
-
-/*
-void AStartHUD::HideAllWidgets()
-{
-	// 把所有管理的Widget放入数组，批量移除
-	TArray<UUserWidget*> ManagedWidgets = {
-		StartWidget,
-
-	};
-	
-	// 遍历移除，逻辑简洁且无依赖
-	for (UUserWidget* Widget : ManagedWidgets)
-	{
-		if (Widget != nullptr) // 简化判断：只要Widget存在，就尝试移除
-		{
-			Widget->RemoveFromViewport();
-		}
-	}
-	UE_LOG(LogTemp, Log, TEXT("StartHUD: 已隐藏所有管理的Widget"));
-	
-}
-*/
-
 
 void AStartHUD::LoadWidgetByGameInstanceEnum()
 {
@@ -173,4 +156,26 @@ void AStartHUD::LoadWidgetByGameInstanceEnum()
 	
 	
 	
+}
+
+void AStartHUD::PlayLoopBGM()
+{
+	OnBgmPlayCallback();
+	
+	// 设置循环定时器
+	const float BgmTotalDuration = 73.0f; 
+	GetWorldTimerManager().SetTimer(
+	BgmLoopTimerHandle, // 传递声明好的句柄（引用类型，语法合法）
+	this, // 所有者指针（HUD 实例）
+	&AStartHUD::OnBgmPlayCallback, // 回调函数（UE 推荐的成员函数指针格式）
+	BgmTotalDuration, // 定时时长
+	true // 开启循环（定时器自动重复，无需重新创建）
+);
+}
+
+// 新增：BGM 播放回调（仅负责播放 BGM，被定时器循环调用）
+void AStartHUD::OnBgmPlayCallback()
+{
+	TObjectPtr<UMyGameInstance> GI = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	GI->LoadAndPlaySound2D(BgmPath, 0.5f);
 }

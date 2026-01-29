@@ -182,7 +182,7 @@ void UChoseMapWidget::InitializeMapLock(int32 MapIndex)
 //点击进入关卡按钮
 void UChoseMapWidget::OnClickedInMap()
 {
-	UE_LOG(LogTemp, Log, TEXT("UMG：点击进入关卡,当前bNextInMap=%s,地图名称=%s"),
+	UE_LOG(LogTemp, Log, TEXT("UMG：点击进入关卡按钮,当前bNextInMap=%s,地图名称=%s"),
 		bNextInMap ? TEXT("true") : TEXT("false"),  
 		*MapName.ToString()                          
 		);
@@ -198,11 +198,19 @@ void UChoseMapWidget::OnClickedInMap()
         //2.调用函数
         //MyGM->StartGameLevel("M_Box");//注意这里默认调用的是map1
         UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
+		FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Sure_Sound.Sure_Sound");
+		GI->LoadAndPlaySound2D(OtherSoundPath);//播放确认的音效
         if (GI->GetLevelStatus(MapName)!=ELevelStatus::Locked)//先判断是否解锁
         {
         	GI->SetMaxBox(MapName);//设置最大盒子数
             MyGM->StartGameLevel(MapName);//切换关卡
         }
+	}
+	else
+	{
+		UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
+		FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Miss_Sound.Miss_Sound");
+		GI->LoadAndPlaySound2D(OtherSoundPath);
 	}
 }
 
@@ -235,6 +243,7 @@ void UChoseMapWidget::OnClickedChosePlayer()
 	}	
 	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());	
 	GI->G_WidgetChose = EG_Widget::ChosePlayer;//标记进入游戏选择界面,此步骤可以省略
+	GI->LoadAndPlaySound2D();
 	this->RemoveFromParent();
 	UE_LOG(LogTemp, Log, TEXT("UMG: chose Map 已从视口移除！"));
 }
@@ -253,11 +262,14 @@ void UChoseMapWidget::OnClickedMapBotton(int32 MapIndex)
 	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
 	if (GI->GetLevelStatus(MapName)==ELevelStatus::Locked)
 	{
+		FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Locked_Sound.Locked_Sound");
+		GI->LoadAndPlaySound2D(OtherSoundPath);//播放锁住的音效
 		bNextInMap=false;
 		ShakeLockedMap(MapIndex);
 	}
 	else 
 	{
+		GI->LoadAndPlaySound2D();//正常点击音效
 		PlayAnimation(Anim_Next);
 		Button_InMap->SetRenderOpacity(MapIndex);
 		bNextInMap = true;

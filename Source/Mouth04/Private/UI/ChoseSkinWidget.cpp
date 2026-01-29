@@ -59,7 +59,12 @@ void UChoseSkinWidget::NativeConstruct()
 
 void UChoseSkinWidget::OnClickedNext()
 {
-	if (bCanNext==false) return;
+	if (bCanNext==false)
+	{
+		FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Miss_Sound.Miss_Sound");
+		GI->LoadAndPlaySound2D(OtherSoundPath);
+		return;
+	}
 	UE_LOG(LogTemp, Log, TEXT("UMG:点击下一页:加载地图选择界面"));
 	if (!ChoseMapWidget)
 	{
@@ -338,7 +343,8 @@ void UChoseSkinWidget::OnClickedCat()
 
 void UChoseSkinWidget::OnClickedAnim()
 {
-	
+	FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Miss_Sound.Miss_Sound");
+	GI->LoadAndPlaySound2D(OtherSoundPath);
 	Image_LockAnimal->SetVisibility(ESlateVisibility::Visible);
 	if (CurrentPlayer==1)
 	{

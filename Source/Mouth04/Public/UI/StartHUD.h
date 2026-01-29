@@ -12,6 +12,7 @@
 
 
 enum class EG_Widget : uint8;
+class UMyGameInstance;
 class UStartUserWidget;
 class USelsectPlayerWidget;
 class UChoseSkinWidget;
@@ -33,27 +34,28 @@ class MOUTH04_API AStartHUD : public AHUD
 	TObjectPtr<UChoseSkinWidget> ChoseSkinWidget;	
 	UPROPERTY()
 	TObjectPtr<UChoseMapWidget> ChoseMapWidget;
-	
-	
-	
-	/*
-	UPROPERTY()
-	TObjectPtr<UExitGameWidget> ExitGameWidget;
-	*/
 	UPROPERTY()
 	FString WidgetPath;
-
+	// BGM 相关成员变量
+	UPROPERTY(EditDefaultsOnly, Category = "BGM|Config") // EditDefaultsOnly：仅在编辑器默认值中修改
+	FString BgmPath = TEXT("/Game/MyBoxGame/Sounds/Music/UIChose_BGM.UIChose_BGM");
+	UPROPERTY()
+	FTimerHandle BgmLoopTimerHandle; // 命名句柄，有实际内存地址，支持引用传递
 
 public:
 	virtual void BeginPlay() override;
+
+	void PlayLoopBGM();
+	
+	void OnBgmPlayCallback();	
 	
 	// 核心函数：根据 GameInstance 枚举加载对应 Widget
 	void LoadWidgetByGameInstanceEnum();
 	
-	// 辅助函数：隐藏所有已显示的 Widget
-	//void HideAllWidgets();
-	
 	// 创建并显示主菜单（默认 Start 界面）
 	void CreateStartMenu();
+
 	
+
+
 };

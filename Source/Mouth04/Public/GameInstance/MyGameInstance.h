@@ -202,6 +202,6 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	UFUNCTION(BlueprintCallable, Category = "Global|Sound")
 	void LoadAndPlaySound2D(
 		const FString& SoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Botton_Sound.Botton_Sound"), 
-		float Volume = 1.0f
+		float Volume = 0.8f
 	);//默认值是bottom点击的音效
 };
