@@ -153,6 +153,23 @@ AABoxBot::AABoxBot()
 	{
 		Sound_DestroyBox = DestroyBox.Object;
 	}
+	static ConstructorHelpers::FObjectFinder<USoundBase> Walk_A(TEXT("/Script/Engine.SoundWave'/Game/MyBoxGame/Sounds/SoundEffects/Walk/Walk_1.Walk_1'"));
+	if (Walk_A.Object)
+	{
+		Sound_Walk_A = Walk_A.Object;
+	}
+	
+	static ConstructorHelpers::FObjectFinder<USoundBase> Walk_B(TEXT("/Script/Engine.SoundWave'/Game/MyBoxGame/Sounds/SoundEffects/Walk/Walk_2.Walk_2'"));
+	if (Walk_B.Object)
+	{
+		Sound_Walk_B = Walk_B.Object;
+	}
+	
+	static ConstructorHelpers::FObjectFinder<USoundBase> BoxFallDown(TEXT("/Script/Engine.SoundWave'/Game/MyBoxGame/Sounds/SoundEffects/BoxFallDown.BoxFallDown'"));
+	if (BoxFallDown.Object)
+	{
+		Sound_BoxFallDown = BoxFallDown.Object;
+	}
 	
 	BodySpriteComponent->SetSprite(BodySprite);
 	
@@ -348,6 +365,27 @@ void AABoxBot::Tick(float DeltaTime)
 	}
 	
 	UpdateBoxColor();
+	
+	if (CheckIsOnGround() && FootFlipbookComponent->GetFlipbook() == RunPaperFlipbook)
+	{
+		int32 CurrentFrame = FootFlipbookComponent->GetPlaybackPositionInFrames();
+		if (CurrentFrame != LastRunFrameIndex)
+		{
+			if (CurrentFrame==0)
+			{
+				UGameplayStatics::PlaySoundAtLocation(this,Sound_Walk_A,GetActorLocation());
+			}
+			if (CurrentFrame==4)
+			{
+				UGameplayStatics::PlaySoundAtLocation(this,Sound_Walk_B,GetActorLocation());
+			}
+			LastRunFrameIndex = CurrentFrame;
+		}
+	}
+	else
+	{
+		LastRunFrameIndex = -1;
+	}
 }
 
 // Called to bind functionality to input
@@ -1382,6 +1420,25 @@ void AABoxBot::UpdateBoxColor()
 	}
 }
 
+void AABoxBot::OnThrownBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
+{
+	UE_LOG(LogTemp, Log, TEXT("%f"),NormalImpulse.Size());
+	if (NormalImpulse.Size() < 600.0f) return;
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime - LastImpactTime < 0.1f) 
+	{
+		return; 
+	}	
+	if (Sound_BoxFallDown)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, Sound_BoxFallDown, Hit.Location);
+		LastImpactTime = CurrentTime;
+	}
+	
+	HitComponent->OnComponentHit.RemoveDynamic(this, &AABoxBot::OnThrownBoxHit);
+}
+
 void AABoxBot::ThrowBox(float ThrowVector)
 {
 	if (BoxChain.Num() == 0) return;
@@ -1412,6 +1469,11 @@ void AABoxBot::ThrowBox(float ThrowVector)
             	MyBox->SpriteComponent->SetSprite(BoxB);
             	MyBox->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
             	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
+            	
+            	MyBox->Box->SetNotifyRigidBodyCollision(true);
+            	MyBox->Wheel->SetNotifyRigidBodyCollision(true);
+            	MyBox->Wheel->OnComponentHit.AddDynamic(this, &AABoxBot::OnThrownBoxHit);
+            	
             }
         }
     }
@@ -1444,6 +1506,10 @@ void AABoxBot::ThrowBox(float ThrowVector)
         
     	MyLeader->Box->RecreatePhysicsState();//刷新物理
     	MyLeader->Box->SetSimulatePhysics(true);
+
+    	MyLeader->Box->SetNotifyRigidBodyCollision(true);
+    	MyLeader->Wheel->SetNotifyRigidBodyCollision(true);
+    	MyLeader->Wheel->OnComponentHit.AddDynamic(this, &AABoxBot::OnThrownBoxHit);
     }
 	MyLeader->Box->AddImpulse(FVector(120*ThrowVector,0,350), NAME_None, true);
 	DroppedBoxes = BoxChain;

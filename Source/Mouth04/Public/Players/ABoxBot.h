@@ -140,5 +140,16 @@ private:
 	class USoundBase* Sound_Land;//落地音效
 	class USoundBase* Sound_SpawnBox;//落地音效
 	class USoundBase* Sound_DestroyBox;//落地音效
+	class USoundBase* Sound_BoxFallDown;//落地音效
+	
+	class USoundBase* Sound_Walk_A;//落地音效
+	class USoundBase* Sound_Walk_B;//落地音效
+	int32 LastRunFrameIndex = -1;//落地帧数
+	
+	float LastImpactTime = 0.0f;
+	
+	UFUNCTION()
+	void OnThrownBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
 	
 };
