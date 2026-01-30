@@ -40,6 +40,9 @@ AABoxBot::AABoxBot()
 	UpArrowCom=CreateDefaultSubobject<UPaperSpriteComponent>("UpArrowCom");
 	
 	
+	FootFlipbookComponent->SetCastShadow(true);
+	BodySpriteComponent->SetCastShadow(true);
+	
 	//设置组件所在位置,身体和表情的序列素材组件在BoxBody身体碰撞盒子上,脚的序列动画组件在BoxFoot脚的球形碰撞体上
 	SpringArm->SetupAttachment(RootComponent);
 	Camera->SetupAttachment(SpringArm);

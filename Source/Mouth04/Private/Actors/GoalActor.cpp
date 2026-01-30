@@ -33,7 +33,7 @@ AGoalActor::AGoalActor()
 	{
 		GoalDoorPaperFlipbook=GoalDoorPF.Object;
 	}
-
+	GoalDoorPaperFlipbookComponent->SetCastShadow(true);
 }
 
 // Called when the game starts or when spawned
@@ -56,6 +56,7 @@ void AGoalActor::BeginPlay()
 	{
 		TotalPlayersNeeded=1;
 	}
+	
 }
 
 // Called every frame

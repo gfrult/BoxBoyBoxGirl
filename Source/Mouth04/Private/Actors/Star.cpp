@@ -36,6 +36,7 @@ AStar::AStar()
 	{
 		Sound_GetStar = GetStar.Object;
 	}
+	StarSpriteCom->SetCastShadow(true);
 }
 
 // Called when the game starts or when spawned

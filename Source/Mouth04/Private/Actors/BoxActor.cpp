@@ -47,6 +47,7 @@ ABoxActor::ABoxActor()
 	Wheel->SetSimulatePhysics(false);
 	Wheel->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
 	
+	SpriteComponent->SetCastShadow(true);
 }
 
 // Called when the game starts or when spawned

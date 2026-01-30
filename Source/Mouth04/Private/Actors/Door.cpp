@@ -32,7 +32,7 @@ ADoor::ADoor()
 	SafetyBox->SetCollisionProfileName("Trigger");
 	SafetyBox->SetCollisionResponseToChannels(ECR_Overlap);
 	
-	
+	DoorSpriteComponent->SetCastShadow(true);
 }
 
 // Called when the game starts or when spawned

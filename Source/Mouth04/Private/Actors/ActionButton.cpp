@@ -35,7 +35,7 @@ AActionButton::AActionButton()
 	BaseBox->SetRelativeScale3D(FVector(1.0f,1.0f,0.185f));
 	ButtonPaperSpriteComponent->SetRelativeLocation(FVector(0.0f,0.0f,-12.0f));
 	
-	
+	ButtonPaperSpriteComponent->SetCastShadow(true);
 }
 
 // Called when the game starts or when spawned
