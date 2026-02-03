@@ -4,6 +4,7 @@
 #include "ChoseMapWidget.h"
 #include "Misc/Paths.h"
 #include "LockWidget.h"
+#include "MapTransitionWidget.h"
 #include "StarWidget.h"
 #include "SelsectPlayerWidget.h"
 #include "Components/Button.h"
@@ -55,6 +56,15 @@ void UChoseMapWidget::NativeConstruct()
 	Button_Solo21->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedOneSolo2);
 	Button_Solo3->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedOneSolo3);
 	
+	TransitionWidgetClass=LoadClass<UUserWidget>(
+		nullptr, // 类加载器，无需指定，传 nullptr 即可
+	TEXT("/Game/Blueprints/UMG/U_MapTransition.U_MapTransition_C") );
+	if (!IsValid(TransitionWidgetClass))
+	{
+		UE_LOG(LogTemp, Error, TEXT("加载 U_MapTransition 蓝图失败！请检查路径是否正确！"));
+	}
+	
+	
 	if (Button_InMap)
 	{
 		Button_InMap->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedInMap);
@@ -65,6 +75,16 @@ void UChoseMapWidget::NativeConstruct()
 		Button_ChosePlayer->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedChosePlayer);
 		Button_ChosePlayer->OnHovered.AddDynamic(this, &UChoseMapWidget::OnHoveredChosePlayer);
 	}
+	GI->bIsShowSetting=false;
+	SittingWidgetClass = LoadClass<UUserWidget>(
+		nullptr, // 类加载器，无需指定，传 nullptr 即可
+	TEXT("/Game/Blueprints/UMG/U_Sitting.U_Sitting_C") );
+	// 验证蓝图是否加载成功
+	if (!IsValid(SittingWidgetClass))
+	{
+		UE_LOG(LogTemp, Error, TEXT("加载 U_Sitting 蓝图失败！请检查路径是否正确！"));
+	}
+	Button_Setting->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedSetting);
 	
 }
 
@@ -189,21 +209,14 @@ void UChoseMapWidget::OnClickedInMap()
 	
 	if (bNextInMap)
 	{
-		// 1. 先获取MainMenuGameMode
-        AMainMenuGameMode* MyGM = GetCustomGameMode();
-        if (!MyGM)
-        {
-        	return; // 获取失败则直接返回，避免空指针
-        }
-        //2.调用函数
-        //MyGM->StartGameLevel("M_Box");//注意这里默认调用的是map1
         UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
 		FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Sure_Sound.Sure_Sound");
 		GI->LoadAndPlaySound2D(OtherSoundPath);//播放确认的音效
         if (GI->GetLevelStatus(MapName)!=ELevelStatus::Locked)//先判断是否解锁
         {
         	GI->SetMaxBox(MapName);//设置最大盒子数
-            MyGM->StartGameLevel(MapName);//切换关卡
+        	//播放转场动画并加载新关卡
+        	MapTransitionAndLoadNewMap();
         }
 	}
 	else
@@ -212,6 +225,32 @@ void UChoseMapWidget::OnClickedInMap()
 		FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Miss_Sound.Miss_Sound");
 		GI->LoadAndPlaySound2D(OtherSoundPath);
 	}
+}
+
+void UChoseMapWidget::OnClickedSetting()
+{
+	UMyGameInstance* GI = Cast<UMyGameInstance>(GetGameInstance());
+	if (GI->bIsShowSetting==true) return;
+	UE_LOG(LogTemp, Log, TEXT("点击setting按钮"));
+	UWorld* CurrentWorld = GetWorld();
+	if (!CurrentWorld)
+	{
+		UE_LOG(LogTemp, Error, TEXT("【NewWidget】世界上下文无效，无法创建 U_Sitting 实例！"));
+		return;
+	}
+	// 创建 U_Sitting 实例
+	UUserWidget* NewSittingWidget = CreateWidget<UUserWidget>(
+		CurrentWorld,
+		SittingWidgetClass
+	);
+	if (!IsValid(NewSittingWidget))
+	{
+		UE_LOG(LogTemp, Error, TEXT("创建 U_Sitting 实例失败！"));
+		return;
+	}
+	NewSittingWidget->AddToViewport(10); 
+	GI->bIsShowSetting=true;
+	UE_LOG(LogTemp, Log, TEXT("U_Sitting 已成功添加到游戏视口！"));
 }
 
 void UChoseMapWidget::OnClickedChosePlayer()
@@ -319,6 +358,41 @@ void UChoseMapWidget::OnClickedOneSolo2()
 void UChoseMapWidget::OnClickedOneSolo3()
 {
 	OnClickedMapBotton(3);
+}
+
+void UChoseMapWidget::MapTransitionAndLoadNewMap()
+{
+	UWorld* CurrentWorld = GetWorld();
+	if (!CurrentWorld) return;
+	// 创建 U_MapTransition实例（每次点击都创建新实例）
+	UMapTransitionWidget* MapTransitionInstance = CreateWidget<UMapTransitionWidget>(
+		CurrentWorld,
+		TransitionWidgetClass
+	);
+	if (!IsValid(MapTransitionInstance))
+	{
+		UE_LOG(LogTemp, Error, TEXT("创建 U_MapTransition例失败！"));
+		return;
+	}
+	// 将过渡UI添加到视口最上方
+	if (!MapTransitionInstance->IsInViewport())
+	{
+		MapTransitionInstance->AddToViewport(1000); // TopZOrder=1000，确保覆盖所有其他UI
+	}
+	// 确保过渡UI可见（防止蓝图中默认隐藏）
+	MapTransitionInstance->SetVisibility(ESlateVisibility::Visible);
+	
+	if (IsValid(CurrentWorld))
+	{
+		// 先清除旧定时器，避免重复加载
+		CurrentWorld->GetTimerManager().ClearTimer(DelayLoadTimerHandle);
+		CurrentWorld->GetTimerManager().SetTimer(
+			DelayLoadTimerHandle,
+			FTimerDelegate::CreateUObject(this, &UChoseMapWidget::OnDelayLoadNewLevel),
+			0.5f,
+			false
+		);
+	}
 }
 
 // 工具函数：安全获取自定义GameMode实例
@@ -439,5 +513,11 @@ void UChoseMapWidget::ChoseMapAnim(int32 MapIndex)
         break;
     }
 	PlayAnimation(Anim_ChoseShare);
+}
+
+void UChoseMapWidget::OnDelayLoadNewLevel()
+{
+	AMainMenuGameMode* MyGM = GetCustomGameMode();
+	MyGM->StartGameLevel(MapName);//切换关卡
 }
 

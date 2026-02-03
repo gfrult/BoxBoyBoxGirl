@@ -10,6 +10,7 @@
  * 
  */
 
+class UMapTransitionWidget;
 class UStarWidget;
 class UWidgetSwitcher;
 class UImage;
@@ -32,6 +33,9 @@ public:
 	
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> Button_ChosePlayer;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> Button_Setting;
 	
 	UPROPERTY(meta=(BindWidget))
 	UWidgetSwitcher* WidgetSwitcher_PlayerN;
@@ -168,10 +172,12 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Image_OneGray3;
 	
-	
+	TSubclassOf<UUserWidget> SittingWidgetClass;
 	
 	UPROPERTY()
 	USelsectPlayerWidget* ChosePlayersWidget = nullptr;
+	
+	TSubclassOf<UMapTransitionWidget> TransitionWidgetClass;
 	
 	bool bNextInMap=false;
 	FName MapName;	
@@ -179,6 +185,10 @@ public:
 	
 	UFUNCTION()
 	void OnClickedInMap();
+	
+	UFUNCTION()
+	void OnClickedSetting();
+	
 	
 	UFUNCTION()
 	void OnClickedChosePlayer();
@@ -208,6 +218,8 @@ public:
 	UFUNCTION()
 	void OnClickedOneSolo3();
 	
+	//播放转场动画,然后加载新关卡
+	void MapTransitionAndLoadNewMap();
 	
 	UFUNCTION()
 	void InitializeMapLock(int32 MapIndex);
@@ -217,10 +229,12 @@ public:
 	UFUNCTION()
 	void ChoseMapAnim(int32 MapIndex);
 	
-
+	// 延迟加载新关卡的回调函数（0.5秒后执行）
+	void OnDelayLoadNewLevel();
 	// 工具函数：安全获取自定义GameMode实例
 	AMainMenuGameMode* GetCustomGameMode();
 	// 工具函数：MapName字符串拼接
 	void CombineMapName(int32 MapIndex);
 	
+	FTimerHandle DelayLoadTimerHandle;
 };

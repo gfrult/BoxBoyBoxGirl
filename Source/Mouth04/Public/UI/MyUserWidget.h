@@ -4,6 +4,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MyUserWidget.generated.h"
 
+class UMapTransitionWidget;
 class UCanvasPanel;
 class AABoxBot;
 class UExitWidget;
@@ -30,6 +31,12 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ShowSettingBtn;
 	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> Button_OK;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> Button_Test;
+	
 	// 玩家1的控件变量:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlock_P1MaxNum;
@@ -52,10 +59,30 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "UI|HorizontalBox")
 	TObjectPtr<UHorizontalBox> HorizontalBox_P2;
 
+	UPROPERTY(meta = (BindWidget))
+	UImage* Image_Star1;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Image_Star2;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Image_Star3;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Image_Star4;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Image_Star5;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UHorizontalBox> HorizontalBox_Stars;
+	
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UCanvasPanel>  CanvasPanel_Setting;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UCanvasPanel>  CanvasPanel_Win1;
+	
+	UPROPERTY(meta=(BindWidgetAnim),Transient)
+	TObjectPtr<UWidgetAnimation> Anim_Win;
 	
 	TSubclassOf<UUserWidget> SittingWidgetClass;
+	TSubclassOf<UMapTransitionWidget> TransitionWidgetClass;
 	
 	// ========== 通用函数：修改任意文本块内容 ==========
 	UFUNCTION(BlueprintCallable, Category = "UI|Text")
@@ -85,6 +112,25 @@ public:
 	UFUNCTION()
 	void ResumeGame();
 	
+	UFUNCTION()
+	void UpdateStarNumber();
+	
+	UFUNCTION()
+	void WinAnim();
+
+	UFUNCTION()
+	void GotoMapChoseUI();
+		
+	//工具函数:获得当前关卡的名称
+	UFUNCTION(BlueprintCallable, Category = "Map Info")
+	FName GetCurrentMapName();
+	
+	
+	// 延迟加载新关卡的回调函数（0.5秒后执行）
+	void OnDelayLoadNewLevel();
+
+	
+	
 private:
 	// 委托处理函数：接收剩余箱子数并更新UI
 	UFUNCTION()
@@ -93,5 +139,7 @@ private:
 	void OnP2RemainingBoxNumberChanged(int32 NewNumber);
 	// GameInstance指针（缓存，避免重复Cast）
 	TObjectPtr<UMyGameInstance> GI;
+
+	FTimerHandle DelayLoadTimerHandle;
 	
 };
