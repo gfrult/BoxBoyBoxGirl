@@ -3,8 +3,10 @@
 
 #include "Actors/GoalActor.h"
 
+#include "MyUserWidget.h"
 #include "PaperFlipbookComponent.h"
 #include "PaperSpriteComponent.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/BoxComponent.h"
 #include "GameInstance/MyGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -122,18 +124,29 @@ void AGoalActor::TryToFinishLevel()
 				}
 			}
 			UE_LOG(LogTemp, Log, TEXT("关卡获得总星星数%d"), TotalStarsInLevel);
-			APlayerController* PC2 = UGameplayStatics::GetPlayerController(GetWorld(), 1);
+			/*APlayerController* PC2 = UGameplayStatics::GetPlayerController(GetWorld(), 1);
     
 			if (PC2)
 			{
 				UGameplayStatics::RemovePlayer(PC2, true);
-			}
+			}*/
 			
 			
 			FName LevelName=FName(*GetWorld()->GetName());
 			GI->UpdateLevelProgress(LevelName,TotalStarsInLevel);
-			GI->G_WidgetChose = EG_Widget::ChoseMap;
-			UGameplayStatics::OpenLevel(this,FName("M_Menu"));
+			TArray<UUserWidget*> FoundWidgets;
+			UWidgetBlueprintLibrary::GetAllWidgetsOfClass(GetWorld(), FoundWidgets, UMyUserWidget::StaticClass(), false);
+			if (FoundWidgets.Num() > 0)
+			{
+				UMyUserWidget* MainUI = Cast<UMyUserWidget>(FoundWidgets[0]);
+				if (MainUI)
+				{
+					MainUI->WinAnim();
+				}
+			}
+			
+			/*GI->G_WidgetChose = EG_Widget::ChoseMap;
+			UGameplayStatics::OpenLevel(this,FName("M_Menu"));*/
 		}
 	}
 }

@@ -250,6 +250,16 @@ FName UMyUserWidget::GetCurrentMapName()
 
 void UMyUserWidget::OnDelayLoadNewLevel()
 {
+	//切换关卡时移除p2，防止生成两个umg
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		APlayerController* PC_P2 = UGameplayStatics::GetPlayerController(World, 1);
+		if (PC_P2)
+		{
+			UGameplayStatics::RemovePlayer(PC_P2, true);
+		}
+	}
 	UGameplayStatics::OpenLevel(this, "M_Menu");
 	this->RemoveFromParent();
 }
@@ -386,7 +396,7 @@ void UMyUserWidget::UpdateStarNumber()
 	Image_Star3->SetVisibility(ESlateVisibility::Hidden);
 	Image_Star4->SetVisibility(ESlateVisibility::Hidden);
 	Image_Star5->SetVisibility(ESlateVisibility::Hidden);
-	switch (GI->GetStarNum(GetCurrentMapName()))
+	switch (GI->GetStarNum(FName(GetWorld()->GetName())))
 	{
 	case 0:
 		break;
