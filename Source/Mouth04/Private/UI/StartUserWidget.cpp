@@ -122,7 +122,7 @@ void UStartUserWidget::OncClickNewName()
 	
 	//刷新显示框
 	LoadAndDisplayAllPlayers();
-	GI->AutoSaveCurrentPlayer();//更新存档
+	GI->SavePlayerDataToLocal();//更新存档
 	RefreshSelectedImage();    // 刷新选中图片
 }
 

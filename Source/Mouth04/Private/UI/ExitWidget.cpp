@@ -17,7 +17,7 @@ void UExitWidget::NativeConstruct()
 	Button_GoOn->OnClicked.AddDynamic(this, &UExitWidget::OnClickedGoOn);
 	PlayAnimation(Anim_Shine);
 	GI = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	GI->AutoSaveCurrentPlayer();
+	GI->SavePlayerDataToLocal();//更新存档
 }
 
 void UExitWidget::OnClickedMainUI()
@@ -41,7 +41,7 @@ void UExitWidget::OnClickedGoOn()
 void UExitWidget::OnClickedExit()
 {
 	GI->LoadAndPlaySound2D();
-	GI->AutoSaveCurrentPlayer();
+	GI->SavePlayerDataToLocal();//更新存档
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	// 步骤2：调用 UE 标准退出函数 QuitGame()
 	UKismetSystemLibrary::QuitGame(

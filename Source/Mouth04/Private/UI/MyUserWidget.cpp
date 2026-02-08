@@ -103,7 +103,7 @@ void UMyUserWidget::NativeConstruct()
 	UpdatePlayerNameText();
 }
 
-// UI销毁：取消委托订阅（可选，AddUObject已处理，但显式取消更安全）
+// UI销毁：取消委托订阅
 void UMyUserWidget::NativeDestruct()
 {
 	Super::NativeDestruct();
@@ -468,7 +468,8 @@ void UMyUserWidget::WinAnim()
 	CanvasPanel_Win1->SetVisibility(ESlateVisibility::Visible);
 	Button_OK->SetVisibility(ESlateVisibility::Visible);
 	PlayAnimation(Anim_Win);
-	GI->AutoSaveCurrentPlayer();//更新存档
+	GI->SavePlayerDataToLocal();//更新存档
+	
 	FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Win_Sound.Win_Sound");
 	GI->LoadAndPlaySound2D(OtherSoundPath);//播放胜利的音效
 }

@@ -308,7 +308,7 @@ bool UMyGameInstance::SyncLevelProgressToPlayerSaveData()
 	}
 	// 3. 同步LevelProgressMap到该玩家的PlayerLevelDatas（直接赋值，覆盖旧存档进度）
 	PlayerSaveDatas[PlayerIndex].PlayerLevelDatas = LevelProgressMap;
-	UE_LOG(LogTemp, Warning, TEXT("[进度同步] 已将实时关卡进度同步到玩家ID%d的存档数据"), CurrentSelectedPlayerID);
+	UE_LOG(LogTemp, Warning, TEXT("[进度同步] 已将GI中实时关卡进度同步到玩家ID%d的存档数据,共%d个关卡"), CurrentSelectedPlayerID,PlayerSaveDatas[PlayerIndex].PlayerLevelDatas.Num());
 	return true;
 }
 
@@ -325,7 +325,7 @@ bool UMyGameInstance::SyncPlayerSaveDataToLevelProgress(int32 PlayerID)
 	LevelProgressMap.Empty();
 	// 3. 复制玩家存档中的关卡数据到全局LevelProgressMap
 	LevelProgressMap = PlayerSaveDatas[PlayerIndex].PlayerLevelDatas;
-	UE_LOG(LogTemp, Warning, TEXT("[进度同步] 已将玩家ID%d的存档进度同步到实时LevelProgressMap，共%d个关卡"), PlayerID, LevelProgressMap.Num());
+	UE_LOG(LogTemp, Warning, TEXT("[进度同步] 已将玩家ID%d的本地存档进度同步到实时LevelProgressMap，共%d个关卡"), PlayerID, LevelProgressMap.Num());
 	return true;
 }
 
@@ -391,7 +391,7 @@ void UMyGameInstance::AutoSaveCurrentPlayer()
 	}
 }
 
-// 设置当前选中玩家（切换玩家时自动双向同步进度，保证数据一致）
+// 设置当前选中玩家
 bool UMyGameInstance::SetCurrentSelectedPlayer(int32 PlayerID)
 {
 	// 1. 检查要选中的玩家是否存在且有效
@@ -400,14 +400,9 @@ bool UMyGameInstance::SetCurrentSelectedPlayer(int32 PlayerID)
 		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(FString::Printf(TEXT("选中玩家失败：玩家ID%d不存在！"), PlayerID)));
 		return false;
 	}
-	// 2. 若当前已有选中玩家，先同步其LevelProgressMap到存档数组（保存旧玩家的实时进度）
-	if (CurrentSelectedPlayerID != -1)
-	{
-		SyncLevelProgressToPlayerSaveData();
-	}
-	// 3. 更新gameinstance中当前选中玩家ID
+	// 2. 更新gameinstance中当前选中玩家ID
 	CurrentSelectedPlayerID = PlayerID;
-	// 4. 从本地读取玩家的存档进度到gameinstance的LevelProgressMap
+	// 3. 从本地读取玩家的存档进度到gameinstance的LevelProgressMap
 	bool bSyncSuccess = SyncPlayerSaveDataToLevelProgress(PlayerID);
 	if (bSyncSuccess)
 	{
