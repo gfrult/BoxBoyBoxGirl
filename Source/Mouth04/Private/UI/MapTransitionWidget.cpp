@@ -15,7 +15,7 @@ void UMapTransitionWidget::AutoDestroySelf()
 	// 步骤1：先从视口移除自身（停止渲染，避免残留）
 	if (this->IsInViewport())
 	{
-		this->RemoveFromViewport();
+		this->RemoveFromParent();
 	}
 	// 步骤2：标记为垃圾，交给UE GC回收内存（不可用delete！）
 	this->MarkAsGarbage();

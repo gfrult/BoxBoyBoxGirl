@@ -10,6 +10,7 @@
  * 
  */
 
+class UTextBlock;
 class UMapTransitionWidget;
 class UStarWidget;
 class UWidgetSwitcher;
@@ -172,6 +173,9 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Image_OneGray3;
 	
+	UPROPERTY()
+	UTextBlock* TextBlock_PlayerName;
+	
 	TSubclassOf<UUserWidget> SittingWidgetClass;
 	
 	UPROPERTY()
@@ -223,7 +227,8 @@ public:
 	
 	UFUNCTION()
 	void InitializeMapLock(int32 MapIndex);
-	
+	UFUNCTION()
+	void UpdatePlayerNameText();
 	UFUNCTION()
 	void ShakeLockedMap(int32 MapIndex);
 	UFUNCTION()

@@ -6,6 +6,7 @@
 #include "ChoseSkinWidget.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
+#include "Components/TextBlock.h"
 #include "GameInstance/MyGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/Widget.h"
@@ -49,6 +50,7 @@ void USelsectPlayerWidget::NativeConstruct()
 	{
 		Image_TwoBGLight->SetVisibility(ESlateVisibility::Hidden);
 	}
+	UpdatePlayerNameText();
 }
 	
 void USelsectPlayerWidget::NativeDestruct()
@@ -175,6 +177,28 @@ void USelsectPlayerWidget::OnClickedNext()
 	UE_LOG(LogTemp, Log, TEXT("UMG: SelectPlayerWidget已从视口移除！"));
 }
 
+void USelsectPlayerWidget::UpdatePlayerNameText()
+{
+	UMyGameInstance* GI = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (!TextBlock_PlayerName || !GI)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("StartUserWidget: 文本控件/GameInstance无效，无法更新玩家名称"));
+		return;
+	}
+	// 1. 获取当前选中的PlayerID和对应的名称
+	int32 CurrentID = GI->CurrentSelectedPlayerID;
+	FString PlayerName = TEXT("默认玩家"); // 默认值
+	// 2. 从GameInstance的映射表中查找名称
+	for (const FPlayerSaveData& PlayerData : GI->PlayerSaveDatas)
+	{
+		if (PlayerData.PlayerID==CurrentID)
+		{
+			PlayerName=PlayerData.PlayerName;
+		}
+	}
+	// 3. 设置文本显示（FString转FText，UE文本控件需要FText类型）
+	TextBlock_PlayerName->SetText(FText::FromString(PlayerName));
+}
 
 
 // --- 播放循环动画 ---

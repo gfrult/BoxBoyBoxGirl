@@ -1,11 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "MyGameInstance.generated.h"
 
+
+class UStartUserWidget;
+class UMySaveGame;
 class AABoxBot;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnP1RemainingBoxNumberChanged, int32, value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnP2RemainingBoxNumberChanged, int32, value);
@@ -89,6 +90,27 @@ struct FLevelData//关卡进度信息
 	
 };
 
+USTRUCT(BlueprintType)
+struct FPlayerSaveData
+{
+	GENERATED_BODY()
+	FPlayerSaveData() = default;
+
+	//玩家唯一ID（蓝图只读，由C++自动生成）
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerSave|基础信息")
+	int32 PlayerID = 0;
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerSave|基础信息")
+	FString PlayerName = TEXT("默认玩家");
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerSave|基础信息")
+	bool bCanUse = false;
+    
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerSave|关卡数据")
+	TMap<FName, FLevelData> PlayerLevelDatas;
+};
+
+
 UCLASS()
 class MOUTH04_API UMyGameInstance : public UGameInstance
 {
@@ -104,6 +126,8 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	EG_Widget G_WidgetChose = EG_Widget::Start;//标记需要加载的界面,初始化为start界面
 	UPROPERTY()
 	bool bIsShowSetting;
+	UPROPERTY()
+	UStartUserWidget* StartWidgetInstance;//存储开始界面实例指针
 
 	//P1
 
@@ -130,8 +154,6 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	UPROPERTY(BlueprintReadWrite, Category = "GlobalData")
 	int32 G_P2RemainingBoxNumber = 0;
 	
-	
-	
 	//C++接口，用来切换动物类型
 	UFUNCTION(BlueprintCallable, Category = "AnimalConfig")
 	void SetP1AnimalClass(TSubclassOf<AABoxBot> NewAnimalClass);
@@ -152,15 +174,11 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	void SetP2RemainingBoxNumber(int32 NewNumber);	
 	
 	
-	
-	
 	// 封装函数：获取当前剩余箱子数
 	UFUNCTION(BlueprintCallable, Category = "GlobalData|BoxNumber")
 	int32 GetP1RemainingBoxNumber() const;
 	UFUNCTION(BlueprintCallable, Category = "GlobalData|BoxNumber")
 	int32 GetP2RemainingBoxNumber() const;
-	
-	
 	
 	//关卡数据表
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LevelConfig")
@@ -198,10 +216,57 @@ class MOUTH04_API UMyGameInstance : public UGameInstance
 	UFUNCTION(BlueprintCallable, Category = "SaveData")
 	void MarkLevelAsSeen (FName LevelRowName);
 	
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameInstance|存档数据|玩家列表")
+    TArray<FPlayerSaveData> PlayerSaveDatas;//全局玩家存档数组（存储所有创建的玩家存档数据）
+	
+    UPROPERTY(BlueprintReadWrite, Category = "GameInstance|当前玩家|核心状态")
+    int32 CurrentSelectedPlayerID = -1;// 当前选中的玩家索引（-1表示未选择任何玩家）
+
+	// 保存当前所有玩家存档（先同步当前玩家LevelProgressMap到存档数组，再整体保存） 
+	UFUNCTION(BlueprintCallable, Category = "GameInstance|存档管理|核心操作", meta=(DisplayName="保存玩家数据到本地"))
+	void SavePlayerDataToLocal();
+
+	// 从本地加载所有玩家存档（加载后自动同步当前玩家的LevelProgressMap）| @return 加载成功返回true 
+	UFUNCTION(BlueprintPure, Category = "GameInstance|存档管理|核心操作", meta=(DisplayName="从本地加载玩家数据"))
+	bool LoadPlayerDataFromLocal();
+
+	// 自动保存（先同步当前玩家进度，再保存）
+	UFUNCTION(BlueprintCallable, Category = "GameInstance|存档管理|自动保存", meta=(DisplayName="退出自动保存"))
+	void AutoSaveCurrentPlayer();
+
+	//切换玩家,从本地加载选定玩家数据到gameinstance,保存原有的玩家数据到本地
+	UFUNCTION(BlueprintCallable, Category = "GameInstance|当前玩家|核心操作", meta=(DisplayName="设置当前选中玩家"))
+	bool SetCurrentSelectedPlayer(int32 PlayerID);
+	
+	//新增玩家存档（初始化默认关卡进度）
+	UFUNCTION(BlueprintCallable, Category = "GameInstance|当前玩家|核心操作", meta=(DisplayName="新增玩家存档"))
+	int32 AddNewPlayer(const FString& PlayerName = TEXT(""));
+	
 	// 全局通用 2D 音效播放函数（BlueprintCallable 支持全项目蓝图/代码调用）
 	UFUNCTION(BlueprintCallable, Category = "Global|Sound")
 	void LoadAndPlaySound2D(
 		const FString& SoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Botton_Sound.Botton_Sound"), 
 		float Volume = 0.8f
 	);//默认值是bottom点击的音效
+	
+protected:
+	/** 游戏启动初始化：加载存档→初始化当前玩家 */
+	virtual void Init() override;
+	
+	
+private:
+	UPROPERTY()
+	UMySaveGame* CurrentSaveGameInstance = nullptr;
+	
+	//生成唯一玩家ID（遍历PlayerSaveDatas，取最大ID+1）
+	int32 GenerateUniquePlayerID() const;
+
+	//根据PlayerID查找玩家在PlayerSaveDatas中的索引 
+	int32 FindPlayerIndexByID(int32 PlayerID) const;
+
+	//同步当前LevelProgressMap到存档数组中对应玩家的PlayerLevelDatas 
+	bool SyncLevelProgressToPlayerSaveData();
+
+	//根据PlayerID，将存档数组中玩家的PlayerLevelDatas同步到全局LevelProgressMap
+	bool SyncPlayerSaveDataToLevelProgress(int32 PlayerID);
 };

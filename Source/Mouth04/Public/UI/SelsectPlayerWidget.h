@@ -7,6 +7,7 @@
 #include "SelsectPlayerWidget.generated.h"
 
 
+class UTextBlock;
 /**
  * 
  */
@@ -36,6 +37,8 @@ public:
 	UPROPERTY(meta=(BindWidgetAnim),Transient)
 	TObjectPtr<UWidgetAnimation> Anim_Next;	
 	
+	UPROPERTY()
+	UTextBlock* TextBlock_PlayerName;
 	
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> Button_One;
@@ -81,6 +84,9 @@ public:
 	
 	UFUNCTION()
 	void OnClickedNext();
+	
+	UFUNCTION()
+	void UpdatePlayerNameText();
 	
 	UMyGameInstance* GameInstance;
 	

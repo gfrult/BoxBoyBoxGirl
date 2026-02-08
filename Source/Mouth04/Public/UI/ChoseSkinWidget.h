@@ -20,7 +20,7 @@ class UChoseMapWidget;
 class USelsectPlayerWidget;
 class UButton;
 class UMyGameInstance;
-class USelsectPlayerWidget;
+
 
 
 UCLASS()
@@ -104,6 +104,9 @@ public:
 	UPROPERTY()
 	USelsectPlayerWidget* ChosePlayersWidget = nullptr;
 	
+	UPROPERTY()
+	UTextBlock* TextBlock_PlayerName;
+	
 	UFUNCTION()
 	void OnClickedNext();
 	
@@ -125,6 +128,9 @@ public:
 	void OnClickedCat();
 	UFUNCTION()
 	void OnClickedAnim();
+	
+	UFUNCTION()
+	void UpdatePlayerNameText();
 	
 	//工具函数修改GameInstance中记录P1/P2类型
 	UFUNCTION()

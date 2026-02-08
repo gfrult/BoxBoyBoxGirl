@@ -55,6 +55,7 @@ void UChoseSkinWidget::NativeConstruct()
 		bCanNext=true;
 		OnClickedSheep();//默认选择了小羊
 	}
+	UpdatePlayerNameText();
 }
 
 void UChoseSkinWidget::OnClickedNext()
@@ -360,6 +361,28 @@ void UChoseSkinWidget::OnClickedAnim()
 	}
 	bCanNext=false;
 	PlayAnimation(Anim_CannotNext);
+}
+
+void UChoseSkinWidget::UpdatePlayerNameText()
+{
+	if (!TextBlock_PlayerName || !GI)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("StartUserWidget: 文本控件/GameInstance无效，无法更新玩家名称"));
+		return;
+	}
+	// 1. 获取当前选中的PlayerID和对应的名称
+	int32 CurrentID = GI->CurrentSelectedPlayerID;
+	FString PlayerName = TEXT("默认玩家"); // 默认值
+	// 2. 从GameInstance的映射表中查找名称
+	for (const FPlayerSaveData& PlayerData : GI->PlayerSaveDatas)
+	{
+		if (PlayerData.PlayerID==CurrentID)
+		{
+			PlayerName=PlayerData.PlayerName;
+		}
+	}
+	// 3. 设置文本显示（FString转FText，UE文本控件需要FText类型）
+	TextBlock_PlayerName->SetText(FText::FromString(PlayerName));
 }
 
 void UChoseSkinWidget::ChangePlayerTypeInGI(int32 CurrentPlayerNumber, EGlobalPlayerType PlayerType)

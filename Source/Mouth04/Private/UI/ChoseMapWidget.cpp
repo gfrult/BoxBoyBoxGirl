@@ -9,6 +9,7 @@
 #include "SelsectPlayerWidget.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
+#include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "GameInstance/MyGameInstance.h"
 #include "Kismet/GameplayStatics.h"
@@ -85,7 +86,7 @@ void UChoseMapWidget::NativeConstruct()
 		UE_LOG(LogTemp, Error, TEXT("加载 U_Sitting 蓝图失败！请检查路径是否正确！"));
 	}
 	Button_Setting->OnClicked.AddDynamic(this, &UChoseMapWidget::OnClickedSetting);
-	
+	UpdatePlayerNameText();
 }
 
 //初始化关卡的解锁状态
@@ -197,6 +198,29 @@ void UChoseMapWidget::InitializeMapLock(int32 MapIndex)
 	{
 		UE_LOG(LogTemp,Warning, TEXT("UI初始化:%s :存疑的状态!!"),*MapName.ToString());
 	}
+}
+
+void UChoseMapWidget::UpdatePlayerNameText()
+{
+	UMyGameInstance* GI = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (!TextBlock_PlayerName || !GI)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("StartUserWidget: 文本控件/GameInstance无效，无法更新玩家名称"));
+		return;
+	}
+	// 1. 获取当前选中的PlayerID和对应的名称
+	int32 CurrentID = GI->CurrentSelectedPlayerID;
+	FString PlayerName = TEXT("默认玩家"); // 默认值
+	// 2. 从GameInstance的映射表中查找名称
+	for (const FPlayerSaveData& PlayerData : GI->PlayerSaveDatas)
+	{
+		if (PlayerData.PlayerID==CurrentID)
+		{
+			PlayerName=PlayerData.PlayerName;
+		}
+	}
+	// 3. 设置文本显示（FString转FText，UE文本控件需要FText类型）
+	TextBlock_PlayerName->SetText(FText::FromString(PlayerName));
 }
 
 //点击进入关卡按钮

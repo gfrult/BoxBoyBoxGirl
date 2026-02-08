@@ -37,7 +37,6 @@ void UMyUserWidget::NativeConstruct()
 		UE_LOG(LogTemp, Error, TEXT("【MyUserWidget】加载 U_MapTransition 蓝图失败！请检查路径是否正确！"));
 	}
 	
-	
 	// 绑定按钮点击事件（核心交互逻辑）
 	if (ShowSettingBtn)
 	{
@@ -101,6 +100,7 @@ void UMyUserWidget::NativeConstruct()
 	FWidgetTransform CurrentTransform = HorizontalBox_Stars->GetRenderTransform();
 	CurrentTransform.Translation.X = 0.0f;
 	HorizontalBox_Stars->SetRenderTransform(CurrentTransform);
+	UpdatePlayerNameText();
 }
 
 // UI销毁：取消委托订阅（可选，AddUObject已处理，但显式取消更安全）
@@ -440,12 +440,37 @@ void UMyUserWidget::UpdateStarNumber()
 	}
 }
 
+void UMyUserWidget::UpdatePlayerNameText()
+{
+	if (!TextBlock_PlayerName || !GI)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("StartUserWidget: 文本控件/GameInstance无效，无法更新玩家名称"));
+		return;
+	}
+	// 1. 获取当前选中的PlayerID和对应的名称
+	int32 CurrentID = GI->CurrentSelectedPlayerID;
+	FString PlayerName = TEXT("默认玩家"); // 默认值
+	// 2. 从GameInstance的映射表中查找名称
+	for (const FPlayerSaveData& PlayerData : GI->PlayerSaveDatas)
+	{
+		if (PlayerData.PlayerID==CurrentID)
+		{
+			PlayerName=PlayerData.PlayerName;
+		}
+	}
+	// 3. 设置文本显示（FString转FText，UE文本控件需要FText类型）
+	TextBlock_PlayerName->SetText(FText::FromString(PlayerName));
+}
+
 void UMyUserWidget::WinAnim()
 {
 	UpdateStarNumber();
 	CanvasPanel_Win1->SetVisibility(ESlateVisibility::Visible);
 	Button_OK->SetVisibility(ESlateVisibility::Visible);
 	PlayAnimation(Anim_Win);
+	GI->AutoSaveCurrentPlayer();//更新存档
+	FString OtherSoundPath = TEXT("/Game/MyBoxGame/Sounds/SoundEffects/UI/Win_Sound.Win_Sound");
+	GI->LoadAndPlaySound2D(OtherSoundPath);//播放胜利的音效
 }
 
 void UMyUserWidget::GotoMapChoseUI()

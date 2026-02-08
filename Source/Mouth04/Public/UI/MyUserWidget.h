@@ -70,6 +70,9 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UImage* Image_Star5;
 	
+	UPROPERTY()
+	UTextBlock* TextBlock_PlayerName;
+	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UHorizontalBox> HorizontalBox_Stars;
 	
@@ -114,6 +117,8 @@ public:
 	
 	UFUNCTION()
 	void UpdateStarNumber();
+	UFUNCTION()
+	void UpdatePlayerNameText();
 	
 	UFUNCTION()
 	void WinAnim();
