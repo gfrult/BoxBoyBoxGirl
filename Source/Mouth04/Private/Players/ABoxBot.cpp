@@ -20,7 +20,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Actors/GoalActor.h"
 #include "Components/CapsuleComponent.h"
-
+#include "Actors/SlimeSurface.h" 
+#include "Engine/OverlapResult.h"
 // Sets default values
 AABoxBot::AABoxBot()
 {
@@ -245,6 +246,18 @@ void AABoxBot::PossessedBy(AController* NewController)
 void AABoxBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (WallJumpLockTimer > 0.0f)
+	{
+		WallJumpLockTimer -= DeltaTime;
+	}
+	if (SlimeCooldown > 0.0f)
+	{
+		SlimeCooldown -= DeltaTime;
+	}
+	else
+	{
+		CheckSlimeSurfaces();
+	}
 	// 检测地面状态
 	bool bCurrentOnGround = CheckIsOnGround();
 	bool bJustLanded = !bWasOnGround && bCurrentOnGround;
@@ -407,6 +420,43 @@ void AABoxBot::FellOutOfWorld(const class UDamageType& dmgType)
 
 void AABoxBot::RightFunction(float AxisValue)
 {
+	
+	FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
+	if (WallJumpLockTimer > 0.0f)
+	{
+		return; 
+	}
+	if (bIsStuckToWall)
+	{
+		if (AxisValue != 0.0f)
+		{
+			float InputDir = (AxisValue > 0) ? 1.0f : -1.0f;
+			// 玩家按键方向与墙壁方向相反
+			if (InputDir != SlimeWallDirection)
+			{
+				SlimeTearTimer += GetWorld()->GetDeltaSeconds();
+				if (SlimeTearTimer >= 0.2f) // 长按0.2秒后脱落
+				{
+					DetachFromSlime();
+				}
+			}
+			else
+			{
+				SlimeTearTimer = 0.0f; // 如果往墙上推，重置阻力
+			}
+		}
+		else
+		{
+			SlimeTearTimer = 0.0f; // 没按键，重置阻力
+		}
+		return; // 只要黏在墙上，就拦截原有的水平移动
+	}
+
+	// 天花板水平锁死
+	if (bIsStuckToCeiling)
+	{
+		return; // 悬挂时不能左右移动
+	}
 	if (AxisValue==0)
 	{
 		if (bIsPlayingSquat==false)//添加了一个是否在播放下蹲动画的判断,不在下蹲时下使用站姿状态
@@ -416,7 +466,7 @@ void AABoxBot::RightFunction(float AxisValue)
 			FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
 		}
 		FVector CurrentVel = BoxBody->GetPhysicsLinearVelocity();
-		BoxBody->SetPhysicsLinearVelocity(FVector(0, 0, CurrentVel.Z));
+		BoxBody->SetPhysicsLinearVelocity(FVector(WindVelocityX, 0, CurrentVelocity.Z));
 		bClockSpawnLeft=false;
 		bClockSpawnRight=false;
 		if (bIsInAir)return;
@@ -426,10 +476,10 @@ void AABoxBot::RightFunction(float AxisValue)
 		}
 		return;
 	}
-	FVector CurrentVelocity = BoxBody->GetPhysicsLinearVelocity();
+	
 	if (bIsSpawnMode)
 	{
-		BoxBody->SetPhysicsLinearVelocity(FVector(0,0,CurrentVelocity.Z));
+		BoxBody->SetPhysicsLinearVelocity(FVector(WindVelocityX, 0, CurrentVelocity.Z));
 		if (AxisValue>0)
 		{
 			if (!bClockSpawnRight)
@@ -452,7 +502,11 @@ void AABoxBot::RightFunction(float AxisValue)
 		}
 		
 	}
-	if (bIsPutDown)return;
+	if (bIsPutDown)
+		{
+		BoxBody->SetPhysicsLinearVelocity(FVector(WindVelocityX, 0, CurrentVelocity.Z));
+		return;
+	}
 	if (!bIsInAir||!CheckIsHooked())//检测是否在空中或者有方块接触地面
 	{
 		uint8 RotationYaw = (AxisValue > 0) ? 180 : 0;
@@ -465,7 +519,7 @@ void AABoxBot::RightFunction(float AxisValue)
 		
 		//float DeltaTime = GetWorld()->GetDeltaSeconds();
 		float Speed = 200;
-		float TargetVelX = AxisValue * Speed;
+		float TargetVelX = (AxisValue * Speed) + WindVelocityX;
 		//检测撞墙清空速度，防止挂墙或者卡墙
 		float UAxisValue=(AxisValue > 0) ? 1.0f : -1.0f;
 		FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(29.0f, 29.0f, 29.0f)); 
@@ -563,7 +617,7 @@ void AABoxBot::RightFunction(float AxisValue)
 	}
 	else //悬空且挂在悬崖上立即停止移动
 	{
-		BoxBody->SetPhysicsLinearVelocity(FVector(0.0f, 0.0f, CurrentVelocity.Z));
+		BoxBody->SetPhysicsLinearVelocity(FVector(WindVelocityX, 0, CurrentVelocity.Z));
 	}
 	
 }
@@ -577,6 +631,28 @@ void AABoxBot::JumpFunction()
 		return;
 	}
 	if (bIsPutDown)return;
+	if (bIsStuckToCeiling)
+	{
+		DetachFromSlime(); 
+		return; // 直接返回
+	}
+	if (bIsStuckToWall)
+	{
+		float JumpDirectionX = -SlimeWallDirection; 
+		DetachFromSlime();
+		
+		BoxBody->SetPhysicsLinearVelocity(FVector(WallJumpVelocity.X * JumpDirectionX, 0, WallJumpVelocity.Z));
+		
+		// 输入保护期
+		WallJumpLockTimer = 0.4f; 
+
+		if (FootFlipbookComponent && JumpPaperFlipbook)
+		{
+			FootFlipbookComponent->SetRelativeLocation(FVector(0,-5,10));
+			FootFlipbookComponent->SetFlipbook(JumpPaperFlipbook);
+		}
+		return; 
+	}
 	if (!bIsInAir)
 	{
 		// 1. 先切换为下蹲动画
@@ -940,78 +1016,110 @@ bool AABoxBot::CheckIsHooked()
 	return false;
 }
 
+
 void AABoxBot::PutDownBox()
 {
     if (BoxChain.Num() == 0) return;
-    AActor* LeaderBox = BoxChain[0]; 
-	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSprite(BoxB);
-	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
-    if (!IsValid(LeaderBox)) return;
+    ABoxActor* MyLeader = Cast<ABoxActor>(BoxChain[0]);
+    if (!IsValid(MyLeader)) return;
+	
+    FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(36.0f, 36.0f, 36.0f));
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+    bool bIsTouchingSlime = false;
 
-    for (int32 i = 1; i < BoxChain.Num(); i++)
+    for (AActor* BoxActor : BoxChain)
     {
-        AActor* ChildBox = BoxChain[i];
-        if (IsValid(ChildBox))
+        if (!IsValid(BoxActor)) continue;
+        TArray<FOverlapResult> Overlaps;
+        if (GetWorld()->OverlapMultiByChannel(Overlaps, BoxActor->GetActorLocation(), FQuat::Identity, ECC_Visibility, CheckShape, Params))
         {
-            FAttachmentTransformRules AttachRules(EAttachmentRule::KeepWorld, true);
-            ChildBox->AttachToActor(LeaderBox, AttachRules);
-        	
-            ABoxActor* MyBox = Cast<ABoxActor>(ChildBox);
-            if (MyBox && MyBox->Box)
+            for (const FOverlapResult& Overlap : Overlaps)
             {
-            	MyBox->BotPhysMat->Restitution = 0.0f;  
-            	MyBox->BotPhysMat->Friction = 1.0f;     
-            	MyBox->BotPhysMat->Density = 1.0f;
-            	MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
-            	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
-            	
-            	MyBox->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
-            	MyBox->Wheel->SetPhysMaterialOverride(MyBox->BotPhysMat);
-            	MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
-            	MyBox->SpriteComponent->SetSprite(BoxB);
-            	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
+                if (Overlap.GetActor() && Overlap.GetActor()->IsA<ASlimeSurface>())
+                {
+                    bIsTouchingSlime = true;
+                    break;
+                }
             }
         }
+        if (bIsTouchingSlime) break;
     }
 	
     FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
-    LeaderBox->DetachFromActor(DetachRules);
-	
-    ABoxActor* MyLeader = Cast<ABoxActor>(LeaderBox);
-    if (MyLeader && MyLeader->Box)
+    for (AActor* BoxActor : BoxChain)
     {
-    	MyLeader->Box->SetCollisionProfileName(TEXT("BlockAll"));
-    	
-    	MyLeader->BotPhysMat->Restitution = 0.0f;  
-    	MyLeader->BotPhysMat->Friction = 1.0f;     
-    	MyLeader->BotPhysMat->Density = 1.0f;
-    	MyLeader->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
-    	MyLeader->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
-        	
-    	MyLeader->Box->SetPhysMaterialOverride(MyLeader->BotPhysMat);
-    	MyLeader->Wheel->SetPhysMaterialOverride(MyLeader->BotPhysMat);
-    	MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
-
-    	
-    	MyLeader->Box->SetLinearDamping(1.0f);
-    	MyLeader->Box->GetBodyInstance()->bLockXRotation = true;
-    	MyLeader->Box->GetBodyInstance()->bLockYRotation = true;
-    	MyLeader->Box->GetBodyInstance()->bLockZRotation = true;
-    	
-    	//MyLeader->AddActorWorldOffset(FVector(0, 0, 2.0f), false, nullptr, ETeleportType::TeleportPhysics);
-        
-    	MyLeader->Box->RecreatePhysicsState();//刷新物理
-    	MyLeader->Box->SetSimulatePhysics(true);
+        if (IsValid(BoxActor)) BoxActor->DetachFromActor(DetachRules);
     }
-	DroppedBoxes = BoxChain;
 	
-    BoxChain.Empty();     
-    bIsSpawnMode = false; 
+    for (int32 i = 0; i < BoxChain.Num(); i++)
+    {
+        ABoxActor* MyBox = Cast<ABoxActor>(BoxChain[i]);
+        if (!MyBox || !MyBox->Box) continue;
 
+        MyBox->SpriteComponent->SetSprite(BoxB);
+        MyBox->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
+
+        MyBox->BotPhysMat->Restitution = 0.0f;
+        MyBox->BotPhysMat->Friction = 1.0f;
+        MyBox->BotPhysMat->Density = 1.0f;
+        MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
+        MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
+
+        MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
+        MyBox->Wheel->SetPhysMaterialOverride(MyBox->BotPhysMat);
+
+        MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
+        MyBox->Box->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        MyBox->Box->SetCollisionResponseToAllChannels(ECR_Block);
+        MyBox->Box->SetGenerateOverlapEvents(true);
+
+        MyBox->Wheel->SetCollisionProfileName(TEXT("BlockAll"));
+        MyBox->Wheel->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        MyBox->Wheel->SetCollisionResponseToAllChannels(ECR_Block);
+
+        MyBox->Box->SetNotifyRigidBodyCollision(true);
+        MyBox->Wheel->SetNotifyRigidBodyCollision(true);
+        MyBox->Box->OnComponentHit.AddDynamic(this, &AABoxBot::OnThrownBoxHit);
+        MyBox->Wheel->OnComponentHit.AddDynamic(this, &AABoxBot::OnThrownBoxHit);
+
+
+        MyBox->Box->GetBodyInstance()->bLockXRotation = true;
+        MyBox->Box->GetBodyInstance()->bLockYRotation = true;
+        MyBox->Box->GetBodyInstance()->bLockZRotation = true;
+    	
+        MyBox->Box->RecreatePhysicsState();
+        MyBox->Wheel->RecreatePhysicsState();
+
+        if (i > 0)
+        {
+            MyBox->Box->SetSimulatePhysics(false);
+            MyBox->Wheel->SetSimulatePhysics(false);
+            FAttachmentTransformRules AttachRules(EAttachmentRule::KeepWorld, true);
+            MyBox->AttachToActor(MyLeader, AttachRules);
+        }
+    }
+	
+    MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
+    MyLeader->Box->SetLinearDamping(1.0f);
+
+    if (bIsTouchingSlime)
+    {
+        MyLeader->Box->SetPhysicsLinearVelocity(FVector::ZeroVector);
+        MyLeader->Box->SetSimulatePhysics(false);
+    }
+    else
+    {
+        MyLeader->Box->SetSimulatePhysics(true);
+    }
+
+    DroppedBoxes = BoxChain;
+    BoxChain.Empty();
+    bIsSpawnMode = false;
     bClockSpawnLeft = false;
     bClockSpawnRight = false;
-	RemainingBoxNumber=MaxBoxNumber;
-	UploadtoGameInstance();
+    RemainingBoxNumber=MaxBoxNumber;
+    UploadtoGameInstance();
 }
 
 void AABoxBot::RemoveDroppedBoxes()
@@ -1423,10 +1531,138 @@ void AABoxBot::UpdateBoxColor()
 	}
 }
 
-void AABoxBot::OnThrownBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-	FVector NormalImpulse, const FHitResult& Hit)
+void AABoxBot::CheckSlimeSurfaces()
 {
-	UE_LOG(LogTemp, Log, TEXT("%f"),NormalImpulse.Size());
+	if (CheckIsOnGround())
+	{
+		if (bIsStuckToCeiling || bIsStuckToWall) DetachFromSlime();
+		return;
+	}
+
+	// === 核心修改：收集所有需要探测的身体部位（本体 + 身上所有方块） ===
+	TArray<FVector> CheckLocations;
+	CheckLocations.Add(BoxBody->GetComponentLocation()); // 玩家本体
+
+	for (AActor* BoxActor : BoxChain)
+	{
+		if (IsValid(BoxActor))
+		{
+			CheckLocations.Add(BoxActor->GetActorLocation()); // 身上的方块
+		}
+	}
+
+	FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(28.0f, 28.0f, 28.0f)); 
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	Params.AddIgnoredActors(BoxChain); 
+	Params.AddIgnoredActors(DroppedBoxes); 
+
+	bool bHitCeilingAnywhere = false;
+	bool bHitWallAnywhere = false;
+	float TempWallDirection = 0.0f;
+
+	// 遍历所有部位，检测天花板 
+	for (const FVector& StartLoc : CheckLocations)
+	{
+		FHitResult HitUp;
+		FVector EndUp = StartLoc + FVector(0, 0, 8.0f); 
+		if (GetWorld()->SweepSingleByChannel(HitUp, StartLoc, EndUp, FQuat::Identity, ECC_Visibility, CheckShape, Params) 
+			&& HitUp.GetActor() && HitUp.GetActor()->IsA<ASlimeSurface>())
+		{
+			bHitCeilingAnywhere = true;
+			break; // 只要有一个部位黏住天花板，整体就黏住，直接跳出循环
+		}
+	}
+
+	if (bHitCeilingAnywhere)
+	{
+		if (!bIsStuckToCeiling) 
+		{
+			bIsStuckToCeiling = true;
+			bIsStuckToWall = false; 
+			BoxBody->SetEnableGravity(false); 
+			BoxBody->SetPhysicsLinearVelocity(FVector::ZeroVector); 
+		}
+		return; // 天花板优先级最高，直接返回
+	}
+	else if (bIsStuckToCeiling) 
+	{
+		DetachFromSlime(); // 没有任何部位碰到天花板了，掉落
+	}
+
+	// 遍历所有部位，检测左右墙壁 
+	for (const FVector& StartLoc : CheckLocations)
+	{
+		FHitResult HitSide;
+		FVector EndRight = StartLoc + FVector(8.f, 0, 0);
+		FVector EndLeft = StartLoc + FVector(-8.0f, 0, 0);
+
+		bool bHitRight = GetWorld()->SweepSingleByChannel(HitSide, StartLoc, EndRight, FQuat::Identity, ECC_Visibility, CheckShape, Params) 
+						 && HitSide.GetActor() && HitSide.GetActor()->IsA<ASlimeSurface>();
+		bool bHitLeft = !bHitRight && GetWorld()->SweepSingleByChannel(HitSide, StartLoc, EndLeft, FQuat::Identity, ECC_Visibility, CheckShape, Params) 
+						&& HitSide.GetActor() && HitSide.GetActor()->IsA<ASlimeSurface>();
+
+		if (bHitRight || bHitLeft)
+		{
+			bHitWallAnywhere = true;
+			TempWallDirection = bHitRight ? 1.0f : -1.0f;
+			break; // 只要有一个部位黏住墙壁，整体就黏住
+		}
+	}
+
+	if (bHitWallAnywhere)
+	{
+		if (!bIsStuckToWall) 
+		{
+			bIsStuckToWall = true;
+			SlimeWallDirection = TempWallDirection; 
+			BoxBody->SetEnableGravity(false);
+			BoxBody->SetPhysicsLinearVelocity(FVector::ZeroVector);
+		}
+	}
+	else if (bIsStuckToWall) 
+	{
+		DetachFromSlime(); // 没有任何部位碰到墙壁了，掉落
+	}
+}
+
+void AABoxBot::DetachFromSlime()
+{
+	bIsStuckToCeiling = false;
+	bIsStuckToWall = false;
+	SlimeWallDirection = 0.0f;
+	SlimeTearTimer = 0.0f; // 重置撕扯计时器
+	BoxBody->SetEnableGravity(true); // 恢复物理重力
+	SlimeCooldown = 0.2f; // 冷却
+}
+
+void AABoxBot::OnThrownBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+                              FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (OtherActor && OtherActor->IsA<ASlimeSurface>())
+	{
+		AActor* HitActor = HitComponent->GetOwner();
+		if (HitActor)
+		{
+			AActor* RootActor = HitActor;
+			while (RootActor->GetAttachParentActor())
+			{
+				RootActor = RootActor->GetAttachParentActor();
+			}
+			
+			ABoxActor* LeaderBox = Cast<ABoxActor>(RootActor);
+			if (LeaderBox && LeaderBox->Box)
+			{
+				LeaderBox->Box->SetPhysicsLinearVelocity(FVector::ZeroVector);
+				LeaderBox->Box->SetSimulatePhysics(false);
+				LeaderBox->Box->RecreatePhysicsState();
+				LeaderBox->Wheel->RecreatePhysicsState();
+			}
+		}
+		// 黏住后，解除绑定，防止重复触发
+		HitComponent->OnComponentHit.RemoveDynamic(this, &AABoxBot::OnThrownBoxHit);
+		return; 
+	}
 	if (NormalImpulse.Size() < 600.0f) return;
 	float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (CurrentTime - LastImpactTime < 0.1f) 
@@ -1444,86 +1680,108 @@ void AABoxBot::OnThrownBoxHit(UPrimitiveComponent* HitComponent, AActor* OtherAc
 
 void AABoxBot::ThrowBox(float ThrowVector)
 {
-	if (BoxChain.Num() == 0) return;
-    AActor* LeaderBox = BoxChain[0]; 
-	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSprite(BoxB);
-	Cast<ABoxActor>(LeaderBox)->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
-    if (!IsValid(LeaderBox)) return;
+    if (BoxChain.Num() == 0) return;
+    ABoxActor* MyLeader = Cast<ABoxActor>(BoxChain[0]);
+    if (!IsValid(MyLeader)) return;
+	
+    FCollisionShape CheckShape = FCollisionShape::MakeBox(FVector(36.0f, 36.0f, 36.0f));
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+    bool bIsTouchingSlime = false;
 
-    for (int32 i = 1; i < BoxChain.Num(); i++)
+    for (AActor* BoxActor : BoxChain)
     {
-        AActor* ChildBox = BoxChain[i];
-        if (IsValid(ChildBox))
+        if (!IsValid(BoxActor)) continue;
+        TArray<FOverlapResult> Overlaps;
+        if (GetWorld()->OverlapMultiByChannel(Overlaps, BoxActor->GetActorLocation(), FQuat::Identity, ECC_Visibility, CheckShape, Params))
         {
-            FAttachmentTransformRules AttachRules(EAttachmentRule::KeepWorld, true);
-            ChildBox->AttachToActor(LeaderBox, AttachRules);
-        	
-            ABoxActor* MyBox = Cast<ABoxActor>(ChildBox);
-            if (MyBox && MyBox->Box)
+            for (const FOverlapResult& Overlap : Overlaps)
             {
-            	MyBox->BotPhysMat->Restitution = 0.0f;  
-            	MyBox->BotPhysMat->Friction = 1.0f;     
-            	MyBox->BotPhysMat->Density = 1.0f;
-            	MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
-            	MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
-            	
-            	MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
-            	MyBox->Wheel->SetPhysMaterialOverride(MyBox->BotPhysMat);
-            	MyBox->SpriteComponent->SetSprite(BoxB);
-            	MyBox->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
-            	MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
-            	
-            	MyBox->Box->SetNotifyRigidBodyCollision(true);
-            	MyBox->Wheel->SetNotifyRigidBodyCollision(true);
-            	MyBox->Wheel->OnComponentHit.AddDynamic(this, &AABoxBot::OnThrownBoxHit);
-            	
+                if (Overlap.GetActor() && Overlap.GetActor()->IsA<ASlimeSurface>())
+                {
+                    bIsTouchingSlime = true;
+                    break;
+                }
             }
         }
+        if (bIsTouchingSlime) break;
     }
 	
     FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
-    LeaderBox->DetachFromActor(DetachRules);
-	
-    ABoxActor* MyLeader = Cast<ABoxActor>(LeaderBox);
-    if (MyLeader && MyLeader->Box)
+    for (AActor* BoxActor : BoxChain)
     {
-    	MyLeader->Box->SetCollisionProfileName(TEXT("BlockAll"));
-    	
-    	MyLeader->BotPhysMat->Restitution = 0.0f;  
-    	MyLeader->BotPhysMat->Friction = 1.0f;     
-    	MyLeader->BotPhysMat->Density = 1.0f;
-    	MyLeader->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
-    	MyLeader->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
-        	
-    	MyLeader->Box->SetPhysMaterialOverride(MyLeader->BotPhysMat);
-    	MyLeader->Wheel->SetPhysMaterialOverride(MyLeader->BotPhysMat);
-    	
-    	MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
-    	
-    	MyLeader->Box->SetLinearDamping(1.0f);
-    	MyLeader->Box->GetBodyInstance()->bLockXRotation = true;
-    	MyLeader->Box->GetBodyInstance()->bLockYRotation = true;
-    	MyLeader->Box->GetBodyInstance()->bLockZRotation = true;
-    	
-    	//MyLeader->AddActorWorldOffset(FVector(0, 0, 2.0f), false, nullptr, ETeleportType::TeleportPhysics);
-        
-    	MyLeader->Box->RecreatePhysicsState();//刷新物理
-    	MyLeader->Box->SetSimulatePhysics(true);
-
-    	MyLeader->Box->SetNotifyRigidBodyCollision(true);
-    	MyLeader->Wheel->SetNotifyRigidBodyCollision(true);
-    	MyLeader->Wheel->OnComponentHit.AddDynamic(this, &AABoxBot::OnThrownBoxHit);
+        if (IsValid(BoxActor)) BoxActor->DetachFromActor(DetachRules);
     }
-	MyLeader->Box->AddImpulse(FVector(120*ThrowVector,0,350), NAME_None, true);
-	DroppedBoxes = BoxChain;
 	
-    BoxChain.Empty();     
-    bIsSpawnMode = false; 
+    for (int32 i = 0; i < BoxChain.Num(); i++)
+    {
+        ABoxActor* MyBox = Cast<ABoxActor>(BoxChain[i]);
+        if (!MyBox || !MyBox->Box) continue;
 
+        MyBox->SpriteComponent->SetSprite(BoxB);
+        MyBox->SpriteComponent->SetSpriteColor(FLinearColor(1,1,1));
+
+        MyBox->BotPhysMat->Restitution = 0.0f;
+        MyBox->BotPhysMat->Friction = 1.0f;
+        MyBox->BotPhysMat->Density = 1.0f;
+        MyBox->BotPhysMat->FrictionCombineMode=EFrictionCombineMode::Max;
+        MyBox->BotPhysMat->RestitutionCombineMode=EFrictionCombineMode::Min;
+
+        MyBox->Box->SetPhysMaterialOverride(MyBox->BotPhysMat);
+        MyBox->Wheel->SetPhysMaterialOverride(MyBox->BotPhysMat);
+
+        MyBox->Box->SetCollisionProfileName(TEXT("BlockAll"));
+        MyBox->Box->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        MyBox->Box->SetCollisionResponseToAllChannels(ECR_Block);
+        MyBox->Box->SetGenerateOverlapEvents(true);
+
+        MyBox->Wheel->SetCollisionProfileName(TEXT("BlockAll"));
+        MyBox->Wheel->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        MyBox->Wheel->SetCollisionResponseToAllChannels(ECR_Block);
+
+        MyBox->Box->SetNotifyRigidBodyCollision(true);
+        MyBox->Wheel->SetNotifyRigidBodyCollision(true);
+        MyBox->Box->OnComponentHit.AddDynamic(this, &AABoxBot::OnThrownBoxHit);
+        MyBox->Wheel->OnComponentHit.AddDynamic(this, &AABoxBot::OnThrownBoxHit);
+    	
+        MyBox->Box->GetBodyInstance()->bLockXRotation = true;
+        MyBox->Box->GetBodyInstance()->bLockYRotation = true;
+        MyBox->Box->GetBodyInstance()->bLockZRotation = true;
+
+
+        MyBox->Box->RecreatePhysicsState();
+        MyBox->Wheel->RecreatePhysicsState();
+
+        if (i > 0)
+        {
+            MyBox->Box->SetSimulatePhysics(false);
+            MyBox->Wheel->SetSimulatePhysics(false);
+            FAttachmentTransformRules AttachRules(EAttachmentRule::KeepWorld, true);
+            MyBox->AttachToActor(MyLeader, AttachRules);
+        }
+    }
+	
+    MyLeader->Box->SetMassOverrideInKg(NAME_None, 100.0f, true);
+    MyLeader->Box->SetLinearDamping(1.0f);
+
+    if (bIsTouchingSlime)
+    {
+        MyLeader->Box->SetPhysicsLinearVelocity(FVector::ZeroVector);
+        MyLeader->Box->SetSimulatePhysics(false);
+    }
+    else
+    {
+        MyLeader->Box->SetSimulatePhysics(true);
+        MyLeader->Box->AddImpulse(FVector(120 * ThrowVector, 0, 350), NAME_None, true);
+    }
+
+    DroppedBoxes = BoxChain;
+    BoxChain.Empty();
+    bIsSpawnMode = false;
     bClockSpawnLeft = false;
     bClockSpawnRight = false;
-	RemainingBoxNumber=MaxBoxNumber;
-	UploadtoGameInstance();
+    RemainingBoxNumber=MaxBoxNumber;
+    UploadtoGameInstance();
 }
 
 

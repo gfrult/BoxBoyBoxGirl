@@ -31,7 +31,11 @@ ASharedCamera::ASharedCamera()
 	
 	CameraComp->FieldOfView = 15.0f;
 	
-	
+	CameraComp->PostProcessSettings.bOverride_DepthOfFieldFocalDistance = true; 
+
+	CameraComp->PostProcessSettings.bOverride_DepthOfFieldFstop = true;
+
+	CameraComp->PostProcessSettings.DepthOfFieldFstop = 1.4f;
 }
 
 // Called when the game starts or when spawned
@@ -90,7 +94,7 @@ void ASharedCamera::Tick(float DeltaTime)
 	
 	SpringArm->TargetArmLength = SmoothLength;
 	
-	
+	CameraComp->PostProcessSettings.DepthOfFieldFocalDistance = SpringArm->TargetArmLength;
 	
 	
 	float CurrentOffsetZ = SpringArm->SocketOffset.Z;

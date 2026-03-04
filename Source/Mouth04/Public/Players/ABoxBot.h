@@ -130,6 +130,29 @@ public:
 	int32 CurrentAnchorIndex;
 	bool bCanRetract=false;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Environment")
+	float WindVelocityX = 0.0f; // 当前受到的风速
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime Settings")
+	bool bIsStuckToCeiling = false;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Slime Settings")
+	bool bIsStuckToWall = false;
+	
+	float SlimeWallDirection = 0.0f; 
+	
+	float SlimeTearTimer = 0.0f;     
+	
+	float SlimeCooldown = 0.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slime Settings")
+	FVector WallJumpVelocity = FVector(300.0f, 0.0f, 500.0f);
+	
+	void CheckSlimeSurfaces(); 
+	void DetachFromSlime();    
+	
+	float WallJumpLockTimer = 0.0f;
+	
 private:
 	UPROPERTY()
 	FTimerHandle SquatTimerHandle; // 下蹲动画的计时器

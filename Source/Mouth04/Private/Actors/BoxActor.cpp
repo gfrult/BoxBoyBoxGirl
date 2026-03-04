@@ -57,6 +57,22 @@ void ABoxActor::BeginPlay()
 	
 }
 
+void ABoxActor::Destroyed()
+{
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	
+	for (AActor* AttachedBox : AttachedActors)
+	{
+		if (IsValid(AttachedBox))
+		{
+			AttachedBox->Destroy();
+		}
+	}
+	
+	Super::Destroyed();
+}
+
 // Called every frame
 void ABoxActor::Tick(float DeltaTime)
 {

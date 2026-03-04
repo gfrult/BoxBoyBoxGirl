@@ -8,7 +8,7 @@ public class Mouth04 : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput","Paper2D","PhysicsCore","UMG","Slate","SlateCore","EnhancedInput" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput","Paper2D","PhysicsCore","UMG","Slate","SlateCore","EnhancedInput" , "Niagara"});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 		// ========== 新增的PublicIncludePaths配置 ==========
