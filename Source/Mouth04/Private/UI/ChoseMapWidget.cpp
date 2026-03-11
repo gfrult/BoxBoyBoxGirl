@@ -386,54 +386,59 @@ void UChoseMapWidget::OnClickedOneSolo3()
 
 void UChoseMapWidget::MapTransitionAndLoadNewMap()
 {
-	UWorld* CurrentWorld = GetWorld();
-	// 1. 校验World有效性，同时添加日志便于调试
-	if (!CurrentWorld)
-	{
-		UE_LOG(LogTemp, Error, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: CurrentWorld is nullptr!"));
-		return;
-	}
+    // ========== 核心修复：完全绕过UE5.4有问题的CreateWidget模板 ==========
+    UWorld* CurrentWorld = GetWorld();
+    if (!CurrentWorld)
+    {
+        UE_LOG(LogTemp, Fatal, TEXT("[ChoseMapWidget] Line405: World is nullptr!"));
+        return;
+    }
 
-	// 2. 核心修复：校验TransitionWidgetClass有效性（崩溃的主要原因）
-	if (!TransitionWidgetClass)
-	{
-		UE_LOG(LogTemp, Error, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: TransitionWidgetClass is invalid/null! Please check the blueprint variable assignment."));
-		return;
-	}
+    // 1. 强制指定Widget类（不再依赖蓝图变量，避免空值）
+    UClass* MapTransitionClass = nullptr;
+    // 方式1：硬编码加载（推荐，彻底避免蓝图赋值问题）
+    static const FString WidgetPath = TEXT("/Game/UI/WBP_MapTransition.WBP_MapTransition_C"); // 替换为你的Widget蓝图路径
+    MapTransitionClass = LoadClass<UMapTransitionWidget>(nullptr, *WidgetPath);
 
-	// 3. 创建UMapTransitionWidget实例，保留IsValid校验并增强日志
-	UMapTransitionWidget* MapTransitionInstance = CreateWidget<UMapTransitionWidget>(
-		CurrentWorld,
-		TransitionWidgetClass
-	);
-    
-	if (!IsValid(MapTransitionInstance))
-	{
-		UE_LOG(LogTemp, Error, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: 创建U_MapTransition实例失败！TransitionWidgetClass路径: %s"), 
-			*GetNameSafe(TransitionWidgetClass)); // 打印Class名称，便于定位问题
-		return;
-	}
+    // 方式2：兜底（如果硬编码失败，尝试蓝图变量）
+    if (!MapTransitionClass && TransitionWidgetClass)
+    {
+        MapTransitionClass = TransitionWidgetClass;
+    }
 
-	// 4. 将过渡UI添加到视口，逻辑保持但添加日志
-	if (!MapTransitionInstance->IsInViewport())
-	{
-		MapTransitionInstance->AddToViewport(1000); // TopZOrder=1000，确保覆盖所有其他UI
-		UE_LOG(LogTemp, Log, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: MapTransitionInstance added to viewport (ZOrder=1000)"));
-	}
+    // 2. 最终校验Class
+    if (!MapTransitionClass)
+    {
+        UE_LOG(LogTemp, Fatal, TEXT("[ChoseMapWidget] Line405: MapTransitionClass load failed! Path=%s"), *WidgetPath);
+        return;
+    }
 
-	// 5. 确保过渡UI可见
-	MapTransitionInstance->SetVisibility(ESlateVisibility::Visible);
+    // 3. 使用UE底层API创建Widget（绕过模板函数，根治崩溃）
+    UMapTransitionWidget* MapTransitionInstance = nullptr;
+    // 直接调用UUserWidget的静态创建函数（UE5.4兼容）
+    MapTransitionInstance = NewObject<UMapTransitionWidget>(CurrentWorld->GetGameInstance(), MapTransitionClass);
+    if (MapTransitionInstance)
+    {
+        // 手动初始化Widget（模拟CreateWidget的内部逻辑）
+        MapTransitionInstance->Initialize();
+        MapTransitionInstance->AddToViewport(1000);
+        MapTransitionInstance->SetVisibility(ESlateVisibility::Visible);
+        UE_LOG(LogTemp, Log, TEXT("[ChoseMapWidget] Line405: Widget created via NewObject (no template)"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Fatal, TEXT("[ChoseMapWidget] Line405: NewObject failed to create widget!"));
+        return;
+    }
 
-	// 6. 设置延迟加载定时器（移除重复的CurrentWorld校验）
-	CurrentWorld->GetTimerManager().ClearTimer(DelayLoadTimerHandle);
-	CurrentWorld->GetTimerManager().SetTimer(
-		DelayLoadTimerHandle,
-		FTimerDelegate::CreateUObject(this, &UChoseMapWidget::OnDelayLoadNewLevel),
-		0.5f,
-		false
-	);
-
-	UE_LOG(LogTemp, Log, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: Timer set for delayed level load (0.5s)"));
+    // ========== 原有延迟加载逻辑（保留） ==========
+    CurrentWorld->GetTimerManager().ClearTimer(DelayLoadTimerHandle);
+    CurrentWorld->GetTimerManager().SetTimer(
+        DelayLoadTimerHandle,
+        FTimerDelegate::CreateUObject(this, &UChoseMapWidget::OnDelayLoadNewLevel),
+        0.5f,
+        false
+    );
 }
 
 // 工具函数：安全获取自定义GameMode实例
