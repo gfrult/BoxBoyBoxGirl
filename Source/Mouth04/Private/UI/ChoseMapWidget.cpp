@@ -387,36 +387,53 @@ void UChoseMapWidget::OnClickedOneSolo3()
 void UChoseMapWidget::MapTransitionAndLoadNewMap()
 {
 	UWorld* CurrentWorld = GetWorld();
-	if (!CurrentWorld) return;
-	// 创建 U_MapTransition实例（每次点击都创建新实例）
+	// 1. 校验World有效性，同时添加日志便于调试
+	if (!CurrentWorld)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: CurrentWorld is nullptr!"));
+		return;
+	}
+
+	// 2. 核心修复：校验TransitionWidgetClass有效性（崩溃的主要原因）
+	if (!TransitionWidgetClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: TransitionWidgetClass is invalid/null! Please check the blueprint variable assignment."));
+		return;
+	}
+
+	// 3. 创建UMapTransitionWidget实例，保留IsValid校验并增强日志
 	UMapTransitionWidget* MapTransitionInstance = CreateWidget<UMapTransitionWidget>(
 		CurrentWorld,
 		TransitionWidgetClass
 	);
+    
 	if (!IsValid(MapTransitionInstance))
 	{
-		UE_LOG(LogTemp, Error, TEXT("创建 U_MapTransition例失败！"));
+		UE_LOG(LogTemp, Error, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: 创建U_MapTransition实例失败！TransitionWidgetClass路径: %s"), 
+			*GetNameSafe(TransitionWidgetClass)); // 打印Class名称，便于定位问题
 		return;
 	}
-	// 将过渡UI添加到视口最上方
+
+	// 4. 将过渡UI添加到视口，逻辑保持但添加日志
 	if (!MapTransitionInstance->IsInViewport())
 	{
 		MapTransitionInstance->AddToViewport(1000); // TopZOrder=1000，确保覆盖所有其他UI
+		UE_LOG(LogTemp, Log, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: MapTransitionInstance added to viewport (ZOrder=1000)"));
 	}
-	// 确保过渡UI可见（防止蓝图中默认隐藏）
+
+	// 5. 确保过渡UI可见
 	MapTransitionInstance->SetVisibility(ESlateVisibility::Visible);
-	
-	if (IsValid(CurrentWorld))
-	{
-		// 先清除旧定时器，避免重复加载
-		CurrentWorld->GetTimerManager().ClearTimer(DelayLoadTimerHandle);
-		CurrentWorld->GetTimerManager().SetTimer(
-			DelayLoadTimerHandle,
-			FTimerDelegate::CreateUObject(this, &UChoseMapWidget::OnDelayLoadNewLevel),
-			0.5f,
-			false
-		);
-	}
+
+	// 6. 设置延迟加载定时器（移除重复的CurrentWorld校验）
+	CurrentWorld->GetTimerManager().ClearTimer(DelayLoadTimerHandle);
+	CurrentWorld->GetTimerManager().SetTimer(
+		DelayLoadTimerHandle,
+		FTimerDelegate::CreateUObject(this, &UChoseMapWidget::OnDelayLoadNewLevel),
+		0.5f,
+		false
+	);
+
+	UE_LOG(LogTemp, Log, TEXT("[ChoseMapWidget] MapTransitionAndLoadNewMap: Timer set for delayed level load (0.5s)"));
 }
 
 // 工具函数：安全获取自定义GameMode实例
